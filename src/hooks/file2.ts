@@ -1,0 +1,1 @@
+// hook file2 content here
