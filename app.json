@@ -1,0 +1,1 @@
+{"expo": {"name": "Life Blueprint", "slug": "life-blueprint", "version": "1.0.0", "assetBundlePatterns": ["**/*"], "ios": {"supportsTabletMode": true, "bundleIdentifier": "com.bereketg7.lifeblueprint"}, "android": {"adaptiveIcon": {"backgroundColor": "#ffffff"}, "package": "com.bereketg7.lifeblueprint"}, "web": {"favicon": "./assets/favicon.png"}}}
