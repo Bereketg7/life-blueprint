@@ -1,16 +1,41 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { User } from '../types';
+import { UserProfile } from '../types';
 
 interface UserContextType {
-  user: User | null;
-  setUser: (user: User | null) => void;
+  profile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+  saveProfile: (profile: UserProfile) => void;
+  updateProfile: (partial: Partial<UserProfile>) => void;
+  clearProfile: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading] = useState<boolean>(false);
+  const [error] = useState<string | null>(null);
+
+  const saveProfile = (newProfile: UserProfile) => {
+    setProfile(newProfile);
+  };
+
+  const updateProfile = (partial: Partial<UserProfile>) => {
+    setProfile((prev) =>
+      prev ? { ...prev, ...partial, updatedAt: new Date().toISOString() } : prev
+    );
+  };
+
+  const clearProfile = () => {
+    setProfile(null);
+  };
+
+  return (
+    <UserContext.Provider value={{ profile, loading, error, saveProfile, updateProfile, clearProfile }}>
+      {children}
+    </UserContext.Provider>
+  );
 };
 
 export const useUser = (): UserContextType => {
