@@ -11,14 +11,16 @@ import {
 import { UserProfile } from '../../types';
 import { colors, spacing, typography, borderRadius, shadow } from '../../styles/theme';
 
-interface Props {
-  onComplete: (profile: Partial<UserProfile>) => void;
-}
-
-type ProfileDraft = Partial<UserProfile> & {
+// Extends UserProfile with display fields collected during onboarding
+// that belong to the User record rather than UserProfile.
+interface OnboardingData extends Partial<UserProfile> {
   name?: string;
   email?: string;
-};
+}
+
+interface Props {
+  onComplete: (profile: OnboardingData) => void;
+}
 
 const HEALTH_CONDITIONS = [
   'PCOS', 'Diabetes', 'Hypertension', 'Hypothyroidism',
@@ -61,7 +63,7 @@ const TOTAL_STEPS = 6;
 
 const OnboardingScreen = ({ onComplete }: Props) => {
   const [step, setStep] = useState(0);
-  const [profile, setProfile] = useState<ProfileDraft>({
+  const [profile, setProfile] = useState<OnboardingData>({
     healthConditions: [],
     secondaryGoals: [],
     dietaryRestrictions: [],
@@ -71,7 +73,7 @@ const OnboardingScreen = ({ onComplete }: Props) => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const update = (fields: Partial<ProfileDraft>) =>
+  const update = (fields: Partial<OnboardingData>) =>
     setProfile(prev => ({ ...prev, ...fields }));
 
   const toggleCondition = (condition: string) => {

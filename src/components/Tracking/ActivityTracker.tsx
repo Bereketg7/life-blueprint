@@ -15,6 +15,8 @@ interface Props {
   onSave: (log: Omit<ActivityLog, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
   userId: string;
+  /** User's weight in kg, used for calorie estimation. Defaults to 70kg if not provided. */
+  userWeightKg?: number;
 }
 
 type ActivityType = ActivityLog['type'];
@@ -49,13 +51,14 @@ const MET_VALUES: Record<ActivityType, Record<Intensity, number>> = {
   other: { low: 3, moderate: 5, high: 7 },
 };
 
-const calcCalories = (type: ActivityType, duration: number, intensity: Intensity): number => {
+// Calorie formula: MET × weight(kg) × duration(min) / 60
+// MET values sourced from the Compendium of Physical Activities.
+const calcCalories = (type: ActivityType, duration: number, intensity: Intensity, weightKg: number): number => {
   const met = MET_VALUES[type]?.[intensity] ?? 5;
-  const weightKg = 70;
   return Math.round((met * weightKg * duration) / 60);
 };
 
-const ActivityTracker = ({ onSave, onCancel, userId }: Props) => {
+const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props) => {
   const today = new Date().toISOString().split('T')[0];
   const [activityType, setActivityType] = useState<ActivityType>('walking');
   const [duration, setDuration] = useState('');
@@ -64,7 +67,7 @@ const ActivityTracker = ({ onSave, onCancel, userId }: Props) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const durationNum = parseInt(duration) || 0;
-  const caloriesBurned = durationNum > 0 ? calcCalories(activityType, durationNum, intensity) : 0;
+  const caloriesBurned = durationNum > 0 ? calcCalories(activityType, durationNum, intensity, userWeightKg) : 0;
   const activityName = ACTIVITY_TYPES.find(a => a.value === activityType)?.label ?? 'Activity';
 
   const validate = (): boolean => {

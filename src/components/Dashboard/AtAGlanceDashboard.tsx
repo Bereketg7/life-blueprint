@@ -19,6 +19,7 @@ import {
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
 
 interface Props {
+  userName?: string;
   userProfile?: UserProfile;
   todayActivity?: ActivityLog[];
   todaySleep?: SleepLog;
@@ -55,6 +56,7 @@ const formatDate = (): string =>
   });
 
 const AtAGlanceDashboard = ({
+  userName,
   userProfile,
   todayActivity,
   todaySleep,
@@ -67,8 +69,7 @@ const AtAGlanceDashboard = ({
   onLogSleep,
   onLogMood,
 }: Props) => {
-  const firstName = userProfile?.['name' as keyof UserProfile] as string | undefined
-    ?? 'Friend';
+  const firstName = userName ?? 'Friend';
 
   const totalSteps = todayActivity?.reduce((s, a) => s + (a.steps ?? 0), 0) ?? 0;
   const totalCaloriesBurned = todayActivity?.reduce((s, a) => s + a.caloriesBurned, 0) ?? 0;

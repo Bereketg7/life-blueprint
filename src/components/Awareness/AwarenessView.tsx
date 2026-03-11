@@ -29,6 +29,10 @@ const TREND_CONFIG: Record<string, { icon: string; color: string; label: string 
   stable: { icon: '→', color: colors.warning, label: 'Stable' },
 };
 
+// NOTE: This is a CSS-border approximation of a circular progress ring.
+// It uses 4 discrete quadrants (top/right/bottom/left borders) which creates
+// stepped transitions at 25%, 50%, 75% and 100% rather than a smooth arc.
+// For pixel-perfect rings, replace with an SVG or react-native-svg based solution.
 const CircularScore = ({ score, color }: { score: number; color: string }) => {
   const size = 160;
   const strokeWidth = 14;
