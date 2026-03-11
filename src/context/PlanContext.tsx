@@ -1,12 +1,22 @@
-// Plan Context code...
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Plan } from '../types';
 
-import React, { createContext, useContext, useState } from 'react';
+interface PlanContextType {
+  plans: Plan[];
+  setPlans: (plans: Plan[]) => void;
+}
 
-const PlanContext = createContext();
+const PlanContext = createContext<PlanContextType | undefined>(undefined);
 
-export const PlanProvider = ({ children }) => {
-    const [plan, setPlan] = useState(null);
-    return <PlanContext.Provider value={{ plan, setPlan }}>{children}</PlanContext.Provider>
+export const PlanProvider = ({ children }: { children: ReactNode }) => {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  return <PlanContext.Provider value={{ plans, setPlans }}>{children}</PlanContext.Provider>;
 };
 
-export const usePlan = () => useContext(PlanContext);
+export const usePlan = (): PlanContextType => {
+  const context = useContext(PlanContext);
+  if (!context) {
+    throw new Error('usePlan must be used within a PlanProvider');
+  }
+  return context;
+};
