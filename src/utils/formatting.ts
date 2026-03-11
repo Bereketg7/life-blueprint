@@ -1,5 +1,5 @@
 // Formatting code...
 
-export function formatCurrency(amount) {
+export function formatCurrency(amount: number): string {
     return `$${amount.toFixed(2)}`;
 }

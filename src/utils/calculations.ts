@@ -1,5 +1,5 @@
 // Calculations code...
 
-export function calculateSum(a, b) {
+export function calculateSum(a: number, b: number): number {
     return a + b;
 }

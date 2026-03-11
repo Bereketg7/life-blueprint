@@ -3,7 +3,7 @@ import { ALL_SCHEMAS } from './schema';
 let db: any = null;
 
 export async function initDatabase(): Promise<void> {
-  const { openDatabase } = await import('@expo/sqlite');
+  const { openDatabase } = await import('expo-sqlite');
   db = openDatabase('life_blueprint.db');
 
   return new Promise((resolve, reject) => {

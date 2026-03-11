@@ -1,1 +1,17 @@
-# Add .gitignore file content here
+node_modules/
+.expo/
+dist/
+web-build/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.pem
