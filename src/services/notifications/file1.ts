@@ -4,14 +4,15 @@ export function createNotification(
   title: string,
   body: string,
   scheduledAt: string,
-  goalId?: string
+  relatedId?: string
 ): Notification {
   return {
     id: `notif_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     title,
     body,
     scheduledAt,
-    goalId,
+    type: 'goal',
+    relatedId,
   };
 }
 
