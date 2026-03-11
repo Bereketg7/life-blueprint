@@ -1,22 +1,42 @@
-// Root Navigator code...
-
-import React, { useState } from 'react';
+import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { useUser } from '../context/UserContext';
+import AppNavigator from './AppNavigator';
 import OnboardingScreen from '../components/Onboarding/OnboardingScreen';
-import AtAGlanceDashboard from '../components/Dashboard/AtAGlanceDashboard';
+import { Colors } from '../styles/theme';
+
+const LoadingScreen = () => (
+  <View style={styles.loadingContainer}>
+    <ActivityIndicator size="large" color={Colors.primary} />
+  </View>
+);
 
 const RootNavigator = () => {
-    const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const { profile, loading } = useUser();
 
-    return (
-        <NavigationContainer>
-            {onboardingComplete ? (
-                <AtAGlanceDashboard />
-            ) : (
-                <OnboardingScreen onComplete={() => setOnboardingComplete(true)} />
-            )}
-        </NavigationContainer>
-    );
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <NavigationContainer>
+      {profile ? (
+        <AppNavigator />
+      ) : (
+        <OnboardingScreen onComplete={() => {}} />
+      )}
+    </NavigationContainer>
+  );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+});
 
 export default RootNavigator;
