@@ -1,9 +1,6 @@
-// At A Glance Dashboard component...
-
 import React from 'react';
+import Dashboard from './Dashboard';
 
-const AtAGlanceDashboard = () => {
-    return <div>Dashboard Overview</div>;
-};
-
-export default AtAGlanceDashboard;
+export default function AtAGlanceDashboard() {
+  return <Dashboard />;
+}
