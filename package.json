@@ -19,6 +19,7 @@
     "react-native": "~0.72.0"
   },
   "devDependencies": {
+    "@types/jest": "^27.5.2",
     "@types/react": "~18.0.0",
     "@types/react-native": "^0.72.8",
     "jest": "^27.0.0",
