@@ -25,7 +25,7 @@ function workoutRecommender(logs: LogBundle): Recommendation[] {
       id: generateId(),
       type: 'workout',
       title: 'Increase Workout Frequency',
-      description: 'You've logged fewer than 3 workouts this week. Aim for at least 3-4 sessions.',
+      description: "You've logged fewer than 3 workouts this week. Aim for at least 3-4 sessions.",
       confidence: 0.9,
       priority: 8,
       reward: { xp: 100, coins: 20 },
