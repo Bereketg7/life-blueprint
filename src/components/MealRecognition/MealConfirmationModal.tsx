@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -35,7 +35,7 @@ export const MealConfirmationModal: React.FC<MealConfirmationModalProps> = ({
   const [editedResult, setEditedResult] = useState<MealRecognitionResult | null>(result);
 
   // Sync internal state when parent updates result
-  React.useEffect(() => {
+  useEffect(() => {
     setEditedResult(result);
   }, [result]);
 

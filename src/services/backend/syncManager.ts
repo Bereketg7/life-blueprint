@@ -120,7 +120,7 @@ export class SyncQueue {
 
   clearCompleted(): void {
     this.queue.jobs = this.queue.jobs.filter((j) => j.status !== 'completed');
-    this.persist();
+    void this.persist();
   }
 }
 

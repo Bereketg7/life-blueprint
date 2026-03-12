@@ -21,10 +21,14 @@ export function useWearableSync(): UseWearableSyncReturn {
   const [connectedDevices, setConnectedDevices] = useState<WearableDevice[]>(
     wearableSyncOrchestrator.getConnectedDevices()
   );
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Use a ref so the interval callback always sees the latest isSyncing value
+  // without needing it in the dependency array, preventing timer churn.
+  const isSyncingRef = useRef(isSyncing);
+  isSyncingRef.current = isSyncing;
 
   const syncNow = useCallback(async () => {
-    if (isSyncing) return;
+    if (isSyncingRef.current) return;
     setIsSyncing(true);
     setError(null);
     try {
@@ -40,17 +44,14 @@ export function useWearableSync(): UseWearableSyncReturn {
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing]);
+  }, []); // stable – reads isSyncingRef instead of closure over isSyncing
 
-  // Auto-sync every 6 hours
+  // Auto-sync every 6 hours; created once, never recreated
   useEffect(() => {
-    timerRef.current = setInterval(() => {
+    const timer = setInterval(() => {
       syncNow();
     }, AUTO_SYNC_INTERVAL_MS);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => clearInterval(timer);
   }, [syncNow]);
 
   return { syncNow, isSyncing, connectedDevices, lastSyncAt, lastSyncLog, error };

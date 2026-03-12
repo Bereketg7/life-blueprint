@@ -219,7 +219,11 @@ export const NutritionPreview: React.FC<NutritionPreviewProps> = ({
           { label: 'Carbs',   value: carbs,   unit: 'g', goal: carbsGoal,   color: '#FFC107' },
           { label: 'Fat',     value: fat,     unit: 'g', goal: fatGoal,     color: '#4CAF50' },
         ].map(({ label, value, unit, goal, color }) => {
-          const prog = goal ? Math.min(value / goal, 1) : value / Math.max(protein + carbs + fat, 1);
+          const prog = goal
+            ? Math.min(value / goal, 1)
+            : (protein + carbs + fat) > 0
+            ? value / (protein + carbs + fat)
+            : 0;
           return (
             <View key={label} style={styles.barRow}>
               <Text style={styles.barLabel}>{label}</Text>
