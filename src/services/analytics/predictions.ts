@@ -5,8 +5,7 @@ import {
   Trajectory,
 } from '../../types';
 import { linearRegression } from './mlModels';
-
-const DEFAULT_TARGET_CALORIES = 2000;
+import { DEFAULT_TARGET_CALORIES, KCAL_PER_KG_FAT } from './constants';
 
 /** Predict weight over the next N weeks using caloric data and linear trend. */
 export function predictWeightTrajectory(
@@ -23,7 +22,7 @@ export function predictWeightTrajectory(
   let weight = currentWeight;
   const historical = sorted.map((log) => {
     const deficit = DEFAULT_TARGET_CALORIES - log.calories;
-    weight -= deficit / 7700;
+    weight -= deficit / KCAL_PER_KG_FAT;
     return {
       date: log.date,
       value: parseFloat(weight.toFixed(2)),
@@ -93,7 +92,7 @@ export function predictGoalAchievementDate(
     return d.toISOString().split('T')[0];
   }
 
-  const daysNeeded = Math.abs((weightDiff * 7700) / avgDailyDeficit);
+  const daysNeeded = Math.abs((weightDiff * KCAL_PER_KG_FAT) / avgDailyDeficit);
   const target = new Date();
   target.setDate(target.getDate() + Math.round(daysNeeded));
   return target.toISOString().split('T')[0];

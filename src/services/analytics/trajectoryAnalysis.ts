@@ -1,7 +1,6 @@
 import { ActivityLog, NutritionLog, TrendData } from '../../types';
 import { linearRegression, movingAverage } from './mlModels';
-
-const DEFAULT_TARGET_CALORIES = 2000;
+import { DEFAULT_TARGET_CALORIES, KCAL_PER_KG_FAT } from './constants';
 
 export function calculateWeightTrend(
   weightEntries: Array<{ date: string; weight: number }>,
@@ -50,7 +49,7 @@ export function projectFutureWeight(
   weeklyDeficitKcal: number,
   weeks: number,
 ): number[] {
-  const kgPerWeek = weeklyDeficitKcal / 7700;
+  const kgPerWeek = weeklyDeficitKcal / KCAL_PER_KG_FAT;
   return Array.from({ length: weeks }, (_, i) =>
     parseFloat((currentWeight - kgPerWeek * (i + 1)).toFixed(2)),
   );
@@ -65,7 +64,7 @@ export function calculateWeightTrendFromNutrition(
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((log) => {
       const deficit = DEFAULT_TARGET_CALORIES - log.calories;
-      weight -= deficit / 7700;
+      weight -= deficit / KCAL_PER_KG_FAT;
       return { date: log.date, weight };
     });
   return calculateWeightTrend(entries);

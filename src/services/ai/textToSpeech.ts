@@ -17,7 +17,7 @@ try {
   // expo-speech is optionally available; fall back gracefully if absent
   ExpoSpeech = require('expo-speech');
 } catch {
-  // Not installed – use console fallback
+  console.warn('[TTS] expo-speech not installed — text-to-speech will fall back to console.log. Run: expo install expo-speech');
 }
 
 let _speaking = false;

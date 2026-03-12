@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
     fontWeight: '600',
     fontSize: theme.typography.sizes.sm,
   },

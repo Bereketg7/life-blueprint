@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   messageTextUser: {
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
   },
   messageTextCoach: {
     color: theme.colors.text.primary,

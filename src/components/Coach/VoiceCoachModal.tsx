@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   sendIcon: {
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
     fontSize: 18,
     fontWeight: '700',
   },

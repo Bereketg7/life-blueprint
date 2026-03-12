@@ -14,7 +14,7 @@ let ExpoSpeechRecognition: {
 try {
   ExpoSpeechRecognition = require('expo-speech-recognition');
 } catch {
-  // Not installed – mock responses
+  console.warn('[STT] expo-speech-recognition not installed — speech-to-text will use mock responses. Run: expo install expo-speech-recognition');
 }
 
 let _isListening = false;

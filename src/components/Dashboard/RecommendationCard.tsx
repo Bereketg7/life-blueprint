@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
     fontSize: theme.typography.sizes.sm,
     fontWeight: '600',
   },

@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.error,
   },
   controlIcon: {
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
     fontSize: 12,
     fontWeight: '700',
   },
