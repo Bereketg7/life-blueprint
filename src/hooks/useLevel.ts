@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserLevel } from '../types';
+import { UserLevel, XpTransaction } from '../types';
 import { createUserLevel, getLevelTitle } from '../services/gamification/levelingSystem';
 import { awardXp, getTotalXp, checkLevelUp, getXpBreakdown } from '../services/gamification/xpManager';
 import { getUnlockedFeatures, getUpcomingUnlockables } from '../services/gamification/unlockables';
@@ -11,9 +11,9 @@ export function useLevel(userId: string) {
   const [leveledUpEvent, setLeveledUpEvent] = useState<number | null>(null);
 
   const addXp = useCallback(
-    (amount: number, source: UserLevel['userId'], description: string = '') => {
+    (amount: number, source: XpTransaction['source'] = 'activity', description: string = '') => {
       const previousLevel = userLevel.level;
-      awardXp(userId, amount, 'activity', description);
+      awardXp(userId, amount, source, description);
       const totalXp = getTotalXp(userId);
       const newLevel = createUserLevel(userId, totalXp);
       setUserLevel(newLevel);
