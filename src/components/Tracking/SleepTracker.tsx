@@ -11,6 +11,7 @@ import {
 import { useTracking } from '../../context/TrackingContext';
 import { Colors, Typography, Spacing, BorderRadius } from '../../styles/theme';
 import { SleepLog } from '../../types';
+import { detectSleep } from '../../services/sleepDetection';
 
 interface Props {
   onSubmit?: () => void;
@@ -25,6 +26,27 @@ export default function SleepTracker({ onSubmit }: Props) {
   const [customHours, setCustomHours] = useState('');
   const [quality, setQuality] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   const [notes, setNotes] = useState('');
+
+  const handleDetectSleep = () => {
+    const estimate = detectSleep();
+    const confidenceLabel =
+      estimate.confidence === 'high' ? '🟢 High' :
+      estimate.confidence === 'medium' ? '🟡 Medium' : '🔴 Low';
+    Alert.alert(
+      '😴 Sleep Detected',
+      `Estimated sleep: ${estimate.hoursSlept} hours\nConfidence: ${confidenceLabel}\n\nWould you like to use this?`,
+      [
+        {
+          text: 'Use This',
+          onPress: () => {
+            setSelectedHours(estimate.hoursSlept);
+            setCustomHours('');
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const handleSubmit = () => {
     const hoursValue = selectedHours ?? parseFloat(customHours);
@@ -60,6 +82,16 @@ export default function SleepTracker({ onSubmit }: Props) {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Log Sleep</Text>
+
+      {/* Smart detection banner */}
+      <TouchableOpacity style={styles.detectBanner} onPress={handleDetectSleep} activeOpacity={0.8}>
+        <Text style={styles.detectEmoji}>🤖</Text>
+        <View style={styles.detectText}>
+          <Text style={styles.detectTitle}>Detect My Sleep</Text>
+          <Text style={styles.detectHint}>Auto-estimate based on device usage</Text>
+        </View>
+        <Text style={styles.detectArrow}>›</Text>
+      </TouchableOpacity>
 
       <Text style={styles.label}>Hours Slept</Text>
       <View style={styles.hoursRow}>
@@ -136,6 +168,35 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.lg,
+  },
+  detectBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${Colors.primary}22`,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: `${Colors.primary}55`,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  detectEmoji: { fontSize: 24 },
+  detectText: { flex: 1 },
+  detectTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.primary,
+  },
+  detectHint: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.text.muted,
+    marginTop: 2,
+  },
+  detectArrow: {
+    fontSize: 22,
+    color: Colors.primary,
+    fontWeight: Typography.weights.bold,
   },
   label: {
     fontSize: Typography.sizes.sm,

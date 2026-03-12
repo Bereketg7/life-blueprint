@@ -73,6 +73,8 @@ export interface UserProfile {
   activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extra_active';
   dietaryPreferences: string[];
   healthConditions: string[];
+  workoutNotificationsEnabled: boolean;
+  mealNotificationsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +112,7 @@ export interface NutritionLog {
   carbs: number;
   fat: number;
   notes: string;
+  photoUri?: string;
   status: 'logged' | 'estimated';
   createdAt: string;
 }
