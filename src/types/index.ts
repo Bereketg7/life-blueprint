@@ -554,3 +554,121 @@ export interface Anomaly {
   severity: 'low' | 'medium' | 'high';
   description: string;
 }
+
+// ─── Feature 7: Daily Quest System ──────────────────────────────────────────
+
+export interface Quest {
+  id: string;
+  userId: string;
+  date: string;
+  type: 'workout' | 'nutrition' | 'water' | 'sleep' | 'meditation' | 'steps';
+  title: string;
+  description: string;
+  difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
+  targetValue: number;
+  currentValue: number;
+  unit: string;
+  xpReward: number;
+  coinReward: number;
+  status: 'active' | 'completed' | 'expired';
+  completedAt?: string;
+  createdAt: string;
+}
+
+export interface QuestReward {
+  questId: string;
+  xpAwarded: number;
+  coinsAwarded: number;
+  bonusMultiplier: number;
+  message: string;
+  unlockedAchievement?: string;
+}
+
+export interface QuestProgress {
+  userId: string;
+  date: string;
+  totalQuests: number;
+  completedQuests: number;
+  totalXpEarned: number;
+  totalCoinsEarned: number;
+  streakDays: number;
+}
+
+// ─── Feature 8: Level Progression System ────────────────────────────────────
+
+export interface UserLevel {
+  userId: string;
+  level: number;
+  totalXp: number;
+  xpToNextLevel: number;
+  progressPercent: number;
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'legendary';
+  updatedAt: string;
+}
+
+export interface XpTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  source: 'quest_complete' | 'workout' | 'nutrition_log' | 'sleep_log' | 'streak_bonus' | 'achievement' | 'manual';
+  description: string;
+  timestamp: string;
+}
+
+export interface LevelUnlock {
+  level: number;
+  feature: string;
+  description: string;
+  icon: string;
+  isUnlocked: boolean;
+}
+
+// ─── Feature 9: Battle Pass System ──────────────────────────────────────────
+
+export interface BattlePass {
+  userId: string;
+  seasonId: string;
+  tier: number;
+  totalSeasonXp: number;
+  isPremium: boolean;
+  claimedRewards: string[];
+  updatedAt: string;
+}
+
+export interface SeasonalReward {
+  id: string;
+  seasonId: string;
+  tier: number;
+  track: 'free' | 'premium';
+  type: 'xp_boost' | 'badge' | 'title' | 'theme' | 'avatar_frame' | 'coin_bundle';
+  name: string;
+  description: string;
+  icon: string;
+  isClaimed: boolean;
+}
+
+export interface SeasonalChallenge {
+  id: string;
+  seasonId: string;
+  weekNumber: number;
+  title: string;
+  description: string;
+  xpReward: number;
+  targetValue: number;
+  currentValue: number;
+  type: string;
+  expiresAt: string;
+  completedAt?: string;
+}
+
+export interface Season {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  weekDuration: number;
+  totalTiers: number;
+  xpPerTier: number;
+  theme: string;
+  isActive: boolean;
+}
