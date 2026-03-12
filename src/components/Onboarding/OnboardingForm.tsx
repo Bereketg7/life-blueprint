@@ -23,7 +23,8 @@ interface FormData {
   activityLevel: string;
   dietaryPreferences: string[];
   healthConditions: string[];
-  notificationsEnabled: boolean;
+  workoutNotificationsEnabled: boolean;
+  mealNotificationsEnabled: boolean;
 }
 
 const STEP_TITLES = ['About You', 'Your Goal', 'Health Info', 'Preferences'];
@@ -43,7 +44,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
     activityLevel: '',
     dietaryPreferences: [],
     healthConditions: [],
-    notificationsEnabled: true,
+    workoutNotificationsEnabled: true,
+    mealNotificationsEnabled: true,
   });
 
   const handleFieldChange = (field: string, value: string) => {
@@ -105,6 +107,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
       activityLevel: (formData.activityLevel as UserProfile['activityLevel']) || 'sedentary',
       dietaryPreferences: formData.dietaryPreferences,
       healthConditions: formData.healthConditions,
+      workoutNotificationsEnabled: formData.workoutNotificationsEnabled,
+      mealNotificationsEnabled: formData.mealNotificationsEnabled,
       createdAt: now,
       updatedAt: now,
     };
@@ -157,9 +161,13 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
           <PreferencesForm
             dietaryPreferences={formData.dietaryPreferences}
             onDietaryToggle={handleDietaryToggle}
-            notificationsEnabled={formData.notificationsEnabled}
-            onNotificationsToggle={(enabled) =>
-              setFormData((prev) => ({ ...prev, notificationsEnabled: enabled }))
+            workoutNotificationsEnabled={formData.workoutNotificationsEnabled}
+            mealNotificationsEnabled={formData.mealNotificationsEnabled}
+            onWorkoutNotificationsToggle={(enabled) =>
+              setFormData((prev) => ({ ...prev, workoutNotificationsEnabled: enabled }))
+            }
+            onMealNotificationsToggle={(enabled) =>
+              setFormData((prev) => ({ ...prev, mealNotificationsEnabled: enabled }))
             }
           />
         );

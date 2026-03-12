@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,6 +19,8 @@ import QuickActions from './QuickActions';
 import TodaysFocus from './TodaysFocus';
 import MiniCharts from './MiniCharts';
 import ActivityTracker from '../Tracking/ActivityTracker';
+import NutritionLogger from '../Tracking/NutritionLogger';
+import SleepTracker from '../Tracking/SleepTracker';
 
 type ModalType = 'activity' | 'meal' | 'sleep' | 'mood' | null;
 
@@ -34,14 +35,12 @@ const toISODate = (d = new Date()) => d.toISOString().split('T')[0];
 
 const Dashboard: React.FC = () => {
   const { profile } = useUser();
-  const { getTodayLogs, getWeekLogs, logNutrition, logSleep, logMood } = useTracking();
+  const { getTodayLogs, getWeekLogs, logMood } = useTracking();
   const { updateItemStatus, todayItems } = usePlan();
   const { streak } = useRewards();
   useAwareness(); // for side-effects / warnings
 
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [mealCalories, setMealCalories] = useState('');
-  const [sleepHours, setSleepHours] = useState('');
   const [moodValue, setMoodValue] = useState('');
 
   const todayLogs = getTodayLogs();
@@ -90,36 +89,6 @@ const Dashboard: React.FC = () => {
   }, [weekLogs.mental]);
 
   // Today's plan items come pre-filtered with correct day mapping from usePlan hook
-
-  const handleLogMeal = () => {
-    if (!mealCalories) return;
-    logNutrition({
-      userId: profile?.id ?? 'user',
-      date: toISODate(),
-      mealType: 'snack',
-      calories: parseInt(mealCalories, 10) || 0,
-      protein: 0,
-      carbs: 0,
-      fat: 0,
-      notes: '',
-      status: 'logged',
-    });
-    setMealCalories('');
-    setActiveModal(null);
-  };
-
-  const handleLogSleep = () => {
-    if (!sleepHours) return;
-    logSleep({
-      userId: profile?.id ?? 'user',
-      date: toISODate(),
-      hoursSlept: parseFloat(sleepHours) || 0,
-      quality: 3,
-      notes: '',
-    });
-    setSleepHours('');
-    setActiveModal(null);
-  };
 
   const handleLogMood = () => {
     if (!moodValue) return;
@@ -231,23 +200,7 @@ const Dashboard: React.FC = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Calories</Text>
-              <TextInput
-                style={styles.input}
-                value={mealCalories}
-                onChangeText={setMealCalories}
-                placeholder="e.g. 450"
-                placeholderTextColor={Colors.text.muted}
-                keyboardType="numeric"
-              />
-              <TouchableOpacity
-                style={[styles.logBtn, !mealCalories && styles.logBtnDisabled]}
-                onPress={handleLogMeal}
-                disabled={!mealCalories}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.logBtnText}>Log Meal</Text>
-              </TouchableOpacity>
+              <NutritionLogger onSubmit={() => setActiveModal(null)} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -273,23 +226,7 @@ const Dashboard: React.FC = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Hours Slept</Text>
-              <TextInput
-                style={styles.input}
-                value={sleepHours}
-                onChangeText={setSleepHours}
-                placeholder="e.g. 7.5"
-                placeholderTextColor={Colors.text.muted}
-                keyboardType="decimal-pad"
-              />
-              <TouchableOpacity
-                style={[styles.logBtn, !sleepHours && styles.logBtnDisabled]}
-                onPress={handleLogSleep}
-                disabled={!sleepHours}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.logBtnText}>Log Sleep</Text>
-              </TouchableOpacity>
+              <SleepTracker onSubmit={() => setActiveModal(null)} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -447,17 +384,6 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    fontSize: Typography.sizes.md,
-    color: Colors.text.primary,
-    minHeight: 44,
   },
   logBtn: {
     backgroundColor: Colors.primary,

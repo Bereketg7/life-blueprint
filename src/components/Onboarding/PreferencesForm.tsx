@@ -5,8 +5,10 @@ import { BorderRadius, Colors, Spacing, Typography } from '../../styles/theme';
 interface PreferencesFormProps {
   dietaryPreferences: string[];
   onDietaryToggle: (pref: string) => void;
-  notificationsEnabled: boolean;
-  onNotificationsToggle: (enabled: boolean) => void;
+  workoutNotificationsEnabled: boolean;
+  mealNotificationsEnabled: boolean;
+  onWorkoutNotificationsToggle: (enabled: boolean) => void;
+  onMealNotificationsToggle: (enabled: boolean) => void;
 }
 
 const DIET_OPTIONS = ['None', 'Vegetarian', 'Vegan', 'Keto', 'Paleo', 'Gluten-Free'];
@@ -70,8 +72,10 @@ const toggleStyles = StyleSheet.create({
 const PreferencesForm: React.FC<PreferencesFormProps> = ({
   dietaryPreferences,
   onDietaryToggle,
-  notificationsEnabled,
-  onNotificationsToggle,
+  workoutNotificationsEnabled,
+  mealNotificationsEnabled,
+  onWorkoutNotificationsToggle,
+  onMealNotificationsToggle,
 }) => {
   return (
     <View style={styles.container}>
@@ -99,13 +103,13 @@ const PreferencesForm: React.FC<PreferencesFormProps> = ({
       <View style={styles.togglesCard}>
         <ToggleRow
           label="Daily workout reminders"
-          enabled={notificationsEnabled}
-          onToggle={() => onNotificationsToggle(!notificationsEnabled)}
+          enabled={workoutNotificationsEnabled}
+          onToggle={() => onWorkoutNotificationsToggle(!workoutNotificationsEnabled)}
         />
         <ToggleRow
           label="Meal reminders"
-          enabled={notificationsEnabled}
-          onToggle={() => onNotificationsToggle(!notificationsEnabled)}
+          enabled={mealNotificationsEnabled}
+          onToggle={() => onMealNotificationsToggle(!mealNotificationsEnabled)}
         />
       </View>
     </View>
