@@ -13,22 +13,32 @@ import TrackScreen from '../screens/TrackScreen';
 import PlanScreen from '../screens/PlanScreen';
 import AwarenessScreen from '../screens/AwarenessScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import SocialScreen from '../screens/SocialScreen';
+import HealthcareScreen from '../screens/HealthcareScreen';
+import ReportsScreen from '../screens/ReportsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import { useHealth } from '../context/HealthContext';
+import { useThemeContext } from '../context/ThemeContext';
 import { colors, spacing, typography, borderRadius, shadow } from '../styles/theme';
 import { UserProfile } from '../types';
 
-type Tab = 'home' | 'track' | 'plan' | 'awareness' | 'profile';
+type Tab = 'home' | 'track' | 'plan' | 'awareness' | 'profile' | 'social' | 'healthcare' | 'reports' | 'settings';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'home', label: 'Home', icon: '🏠' },
   { key: 'track', label: 'Track', icon: '📊' },
   { key: 'plan', label: 'Plan', icon: '📅' },
   { key: 'awareness', label: 'Mind', icon: '🧠' },
+  { key: 'social', label: 'Social', icon: '👥' },
+  { key: 'healthcare', label: 'Health', icon: '🏥' },
+  { key: 'reports', label: 'Reports', icon: '📈' },
+  { key: 'settings', label: 'Settings', icon: '⚙️' },
   { key: 'profile', label: 'Me', icon: '👤' },
 ];
 
 const MainApp = () => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
+  const { themeId, accessibility, switchTheme, updateAccessibility } = useThemeContext();
 
   const renderScreen = () => {
     switch (activeTab) {
@@ -40,6 +50,21 @@ const MainApp = () => {
         return <PlanScreen />;
       case 'awareness':
         return <AwarenessScreen />;
+      case 'social':
+        return <SocialScreen />;
+      case 'healthcare':
+        return <HealthcareScreen />;
+      case 'reports':
+        return <ReportsScreen />;
+      case 'settings':
+        return (
+          <SettingsScreen
+            themeId={themeId}
+            accessibility={accessibility}
+            onSwitchTheme={switchTheme}
+            onUpdateAccessibility={updateAccessibility}
+          />
+        );
       case 'profile':
         return <ProfileScreen />;
     }
