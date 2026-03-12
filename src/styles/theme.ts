@@ -58,3 +58,12 @@ export const Shadows = {
     elevation: 8,
   },
 };
+
+/** Convenience theme object for components that import `{ theme }`. */
+export const theme = {
+  colors: Colors,
+  typography: Typography,
+  spacing: Spacing,
+  borderRadius: BorderRadius,
+  shadows: Shadows,
+} as const;

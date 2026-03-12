@@ -429,3 +429,128 @@ export interface BarcodeResult {
   format: string;
   rawValue: string;
 }
+// ─── Feature 4: Smart Recommendations ───────────────────────────────────────
+
+export interface Recommendation {
+  id: string;
+  category: 'workout' | 'nutrition' | 'sleep' | 'mindfulness' | 'recovery';
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  confidence: number;
+  actionType: string;
+  actionData?: Record<string, unknown>;
+  createdAt: string;
+  expiresAt: string;
+  status: 'active' | 'dismissed' | 'accepted';
+}
+
+export interface RecommendationResponse {
+  recommendations: Recommendation[];
+  generatedAt: string;
+  basedOn: string[];
+}
+
+export interface RecommendationFeedback {
+  recommendationId: string;
+  userId: string;
+  action: 'accepted' | 'dismissed' | 'completed';
+  timestamp: string;
+}
+
+// ─── Feature 5: AI Coach ────────────────────────────────────────────────────
+
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'coach';
+  content: string;
+  timestamp: string;
+  isVoice?: boolean;
+  audioUri?: string;
+}
+
+export interface VoiceCommand {
+  type: 'log_nutrition' | 'log_activity' | 'query_stats' | 'start_workout' | 'set_goal' | 'unknown';
+  parameters: Record<string, unknown>;
+  originalText: string;
+  confidence: number;
+}
+
+export interface CoachConversation {
+  id: string;
+  userId: string;
+  messages: CoachMessage[];
+  startedAt: string;
+  endedAt?: string;
+  topic?: string;
+}
+
+// ─── Feature 6: Predictive Health Analytics ─────────────────────────────────
+
+export interface HealthPrediction {
+  id: string;
+  type: 'weight_trajectory' | 'goal_achievement' | 'performance' | 'recovery';
+  title: string;
+  prediction: number | string;
+  confidence: number;
+  timeframe: string;
+  factors: string[];
+  createdAt: string;
+}
+
+export interface RiskAssessment {
+  type: 'injury' | 'burnout' | 'nutritional_deficiency' | 'sleep_deprivation';
+  score: number;
+  level: 'low' | 'moderate' | 'high' | 'critical';
+  factors: string[];
+  recommendations: string[];
+  assessedAt: string;
+}
+
+export interface Trajectory {
+  metric: string;
+  currentValue: number;
+  projectedValues: Array<{ date: string; value: number; isProjected: boolean }>;
+  trend: 'improving' | 'declining' | 'stable';
+  changePerWeek: number;
+}
+
+export interface WeeklyTrainingPlan {
+  id: string;
+  userId: string;
+  weekStartDate: string;
+  days: Array<{
+    date: string;
+    dayOfWeek: string;
+    workout?: Recommendation;
+    nutrition?: Recommendation;
+    notes: string;
+  }>;
+  generatedAt: string;
+}
+
+export interface CoachPersonalityConfig {
+  userId: string;
+  style: 'motivating' | 'analytical' | 'supportive' | 'challenging';
+  name: string;
+  tone: string;
+  focusAreas: string[];
+  updatedAt: string;
+}
+
+export interface TrendData {
+  values: number[];
+  dates: string[];
+  slope: number;
+  average: number;
+  trend: 'improving' | 'declining' | 'stable';
+}
+
+export interface Anomaly {
+  metric: string;
+  date: string;
+  value: number;
+  expectedRange: { min: number; max: number };
+  severity: 'low' | 'medium' | 'high';
+  description: string;
+}
