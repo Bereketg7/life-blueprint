@@ -6,348 +6,277 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
+  SafeAreaView,
 } from 'react-native';
-import { useTracking } from '../../context/TrackingContext';
-import { Colors, Typography, Spacing, BorderRadius } from '../../styles/theme';
 import { NutritionLog } from '../../types';
-import { MEAL_PRESETS, MealPreset } from '../../services/mealPresets';
-import MealPhotoCapture from './MealPhotoCapture';
+import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
 
 interface Props {
-  onSubmit?: () => void;
+  onSave: (log: Omit<NutritionLog, 'id' | 'createdAt'>) => void;
+  onCancel: () => void;
+  userId: string;
 }
 
 type MealType = NutritionLog['mealType'];
 
-const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+const MEAL_TYPES: { value: MealType; label: string; emoji: string; color: string }[] = [
+  { value: 'breakfast', label: 'Breakfast', emoji: '🌅', color: '#F59E0B' },
+  { value: 'lunch', label: 'Lunch', emoji: '☀️', color: '#10B981' },
+  { value: 'dinner', label: 'Dinner', emoji: '🌙', color: '#6C63FF' },
+  { value: 'snack', label: 'Snack', emoji: '🍎', color: '#FF6584' },
+];
 
-export default function NutritionLogger({ onSubmit }: Props) {
-  const { logNutrition } = useTracking();
+const MacroInput = ({
+  label,
+  value,
+  onChange,
+  unit,
+  color,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  unit: string;
+  color: string;
+}) => (
+  <View style={styles.macroBlock}>
+    <Text style={[styles.macroLabel, { color }]}>{label}</Text>
+    <TextInput
+      style={[styles.macroInput, { borderColor: color }]}
+      value={value}
+      onChangeText={onChange}
+      keyboardType="numeric"
+      placeholder="0"
+      placeholderTextColor={colors.text.light}
+    />
+    <Text style={styles.macroUnit}>{unit}</Text>
+  </View>
+);
 
+const NutritionLogger = ({ onSave, onCancel, userId }: Props) => {
+  const today = new Date().toISOString().split('T')[0];
   const [mealType, setMealType] = useState<MealType>('breakfast');
+  const [foodName, setFoodName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [notes, setNotes] = useState('');
-  const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
-  const [showScanner, setShowScanner] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const applyPreset = (preset: MealPreset, uri?: string) => {
-    setCalories(String(preset.calories));
-    setProtein(String(preset.protein));
-    setCarbs(String(preset.carbs));
-    setFat(String(preset.fat));
-    setSelectedPreset(preset.name);
-    if (uri) setPhotoUri(uri);
-    setShowScanner(false);
+  const selectedMeal = MEAL_TYPES.find(m => m.value === mealType)!;
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!foodName.trim()) newErrors.foodName = 'Food name is required';
+    if (!calories || parseInt(calories) <= 0) newErrors.calories = 'Enter valid calories';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const parsePositiveNum = (val: string): number | null => {
-    const n = parseFloat(val);
-    return isNaN(n) || n < 0 ? null : n;
-  };
-
-  const handleSubmit = () => {
-    const caloriesNum = parsePositiveNum(calories);
-    const proteinNum = parsePositiveNum(protein);
-    const carbsNum = parsePositiveNum(carbs);
-    const fatNum = parsePositiveNum(fat);
-
-    if (caloriesNum === null) {
-      Alert.alert('Validation Error', 'Please enter valid calories.');
-      return;
-    }
-    if (proteinNum === null) {
-      Alert.alert('Validation Error', 'Please enter valid protein amount.');
-      return;
-    }
-    if (carbsNum === null) {
-      Alert.alert('Validation Error', 'Please enter valid carbs amount.');
-      return;
-    }
-    if (fatNum === null) {
-      Alert.alert('Validation Error', 'Please enter valid fat amount.');
-      return;
-    }
-
-    logNutrition({
-      userId: 'current_user',
-      date: new Date().toISOString().split('T')[0],
+  const handleSave = () => {
+    if (!validate()) return;
+    onSave({
+      userId,
+      date: today,
       mealType,
-      calories: caloriesNum,
-      protein: proteinNum,
-      carbs: carbsNum,
-      fat: fatNum,
-      notes,
-      photoUri,
-      status: 'logged',
+      foodName: foodName.trim(),
+      calories: parseInt(calories) || 0,
+      protein: parseFloat(protein) || 0,
+      carbs: parseFloat(carbs) || 0,
+      fat: parseFloat(fat) || 0,
+      notes: notes.trim() || undefined,
     });
-
-    setCalories('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
-    setNotes('');
-    setPhotoUri(undefined);
-    setSelectedPreset('');
-    setMealType('breakfast');
-    setShowScanner(false);
-
-    Alert.alert('Success', 'Nutrition logged!');
-    onSubmit?.();
   };
+
+  const totalMacroCalories =
+    (parseFloat(protein) || 0) * 4 +
+    (parseFloat(carbs) || 0) * 4 +
+    (parseFloat(fat) || 0) * 9;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Log Nutrition</Text>
-
-      <Text style={styles.label}>Meal Type</Text>
-      <View style={styles.mealTypeRow}>
-        {MEAL_TYPES.map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[styles.mealTypeBtn, mealType === type && styles.mealTypeBtnActive]}
-            onPress={() => setMealType(type)}
-          >
-            <Text style={[styles.mealTypeBtnText, mealType === type && styles.mealTypeBtnTextActive]}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+          <Text style={styles.cancelText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Log Meal 🍽️</Text>
+        <View style={{ width: 36 }} />
       </View>
-
-      {/* Meal Presets */}
-      <Text style={styles.label}>Quick Presets</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsScroll}>
-        <View style={styles.presetsRow}>
-          {MEAL_PRESETS.map((preset) => (
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.sectionLabel}>Meal Type</Text>
+        <View style={styles.mealTypeRow}>
+          {MEAL_TYPES.map(m => (
             <TouchableOpacity
-              key={preset.name}
-              style={[styles.presetChip, selectedPreset === preset.name && styles.presetChipActive]}
-              onPress={() => applyPreset(preset)}
-              activeOpacity={0.8}
+              key={m.value}
+              style={[
+                styles.mealTypeBtn,
+                mealType === m.value && { backgroundColor: m.color, borderColor: m.color },
+              ]}
+              onPress={() => setMealType(m.value)}
             >
-              <Text
-                style={[
-                  styles.presetChipText,
-                  selectedPreset === preset.name && styles.presetChipTextActive,
-                ]}
-              >
-                {preset.name}
+              <Text style={styles.mealTypeEmoji}>{m.emoji}</Text>
+              <Text style={[styles.mealTypeLabel, mealType === m.value && styles.mealTypeLabelSelected]}>
+                {m.label}
               </Text>
-              <Text style={styles.presetChipCals}>{preset.calories} kcal</Text>
             </TouchableOpacity>
           ))}
         </View>
+
+        <Text style={styles.sectionLabel}>Food Name *</Text>
+        <TextInput
+          style={[styles.input, errors.foodName ? styles.inputError : null]}
+          placeholder={`What did you have for ${selectedMeal.label.toLowerCase()}?`}
+          value={foodName}
+          onChangeText={setFoodName}
+          placeholderTextColor={colors.text.light}
+        />
+        {errors.foodName ? <Text style={styles.errorText}>{errors.foodName}</Text> : null}
+
+        <Text style={styles.sectionLabel}>Calories *</Text>
+        <TextInput
+          style={[styles.input, errors.calories ? styles.inputError : null]}
+          placeholder="e.g. 450"
+          value={calories}
+          onChangeText={setCalories}
+          keyboardType="numeric"
+          placeholderTextColor={colors.text.light}
+        />
+        {errors.calories ? <Text style={styles.errorText}>{errors.calories}</Text> : null}
+
+        <Text style={styles.sectionLabel}>Macronutrients</Text>
+        <View style={styles.macrosRow}>
+          <MacroInput label="Protein" value={protein} onChange={setProtein} unit="g" color={colors.error} />
+          <MacroInput label="Carbs" value={carbs} onChange={setCarbs} unit="g" color={colors.warning} />
+          <MacroInput label="Fat" value={fat} onChange={setFat} unit="g" color={colors.success} />
+        </View>
+        {totalMacroCalories > 0 && (
+          <Text style={styles.macroCalcNote}>
+            Macro-derived: ~{Math.round(totalMacroCalories)} kcal
+          </Text>
+        )}
+
+        <Text style={styles.sectionLabel}>Notes (optional)</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Restaurant, brand, serving size..."
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          numberOfLines={3}
+          placeholderTextColor={colors.text.light}
+        />
       </ScrollView>
-
-      {/* Scan / Photo toggle */}
-      <TouchableOpacity
-        style={styles.scanToggle}
-        onPress={() => setShowScanner((v) => !v)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.scanToggleText}>
-          {showScanner ? '▲ Hide Scanner' : '📷 Scan / Identify Meal'}
-        </Text>
-      </TouchableOpacity>
-
-      {showScanner && (
-        <View style={styles.scannerPanel}>
-          <MealPhotoCapture onMealDetected={applyPreset} />
-        </View>
-      )}
-
-      <Text style={styles.label}>Calories</Text>
-      <TextInput
-        style={styles.input}
-        value={calories}
-        onChangeText={setCalories}
-        placeholder="e.g. 500"
-        placeholderTextColor={Colors.text.muted}
-        keyboardType="numeric"
-      />
-
-      <View style={styles.macroRow}>
-        <View style={styles.macroField}>
-          <Text style={styles.label}>Protein (g)</Text>
-          <TextInput
-            style={styles.input}
-            value={protein}
-            onChangeText={setProtein}
-            placeholder="0"
-            placeholderTextColor={Colors.text.muted}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.macroField}>
-          <Text style={styles.label}>Carbs (g)</Text>
-          <TextInput
-            style={styles.input}
-            value={carbs}
-            onChangeText={setCarbs}
-            placeholder="0"
-            placeholderTextColor={Colors.text.muted}
-            keyboardType="numeric"
-          />
-        </View>
-        <View style={styles.macroField}>
-          <Text style={styles.label}>Fat (g)</Text>
-          <TextInput
-            style={styles.input}
-            value={fat}
-            onChangeText={setFat}
-            placeholder="0"
-            placeholderTextColor={Colors.text.muted}
-            keyboardType="numeric"
-          />
-        </View>
+      <View style={styles.footer}>
+        <TouchableOpacity style={[styles.saveBtn, { backgroundColor: selectedMeal.color }]} onPress={handleSave}>
+          <Text style={styles.saveBtnText}>Save {selectedMeal.label} {selectedMeal.emoji}</Text>
+        </TouchableOpacity>
       </View>
-
-      <Text style={styles.label}>Notes (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.notesInput]}
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Any notes about this meal..."
-        placeholderTextColor={Colors.text.muted}
-        multiline
-        numberOfLines={3}
-      />
-
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitBtnText}>Log Nutrition</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    padding: Spacing.md,
-  },
-  title: {
-    fontSize: Typography.sizes.xl,
-    fontWeight: Typography.weights.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    fontSize: Typography.sizes.sm,
-    fontWeight: Typography.weights.medium,
-    color: Colors.text.secondary,
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  mealTypeRow: {
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  header: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
+  cancelBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelText: { fontSize: typography.size.md, color: colors.text.secondary },
+  headerTitle: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+  },
+  scroll: { flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
+  sectionLabel: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  mealTypeRow: { flexDirection: 'row', gap: spacing.sm },
   mealTypeBtn: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  mealTypeBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  mealTypeBtnText: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.text.secondary,
-    fontWeight: Typography.weights.medium,
-  },
-  mealTypeBtnTextActive: {
-    color: Colors.text.primary,
-  },
-  presetsScroll: {
-    marginBottom: Spacing.sm,
-  },
-  presetsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  presetChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    minWidth: 110,
-  },
-  presetChipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: `${Colors.primary}22`,
-  },
-  presetChipText: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.text.secondary,
-    fontWeight: Typography.weights.medium,
-  },
-  presetChipTextActive: {
-    color: Colors.primary,
-  },
-  presetChipCals: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
-    marginTop: 2,
-  },
-  scanToggle: {
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  scanToggleText: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.primary,
-    fontWeight: Typography.weights.semibold,
-  },
-  scannerPanel: {
-    marginBottom: Spacing.sm,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    color: Colors.text.primary,
-    fontSize: Typography.sizes.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  macroRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  macroField: {
     flex: 1,
-  },
-  notesInput: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
     alignItems: 'center',
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  submitBtnText: {
-    color: Colors.text.primary,
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.bold,
+  mealTypeEmoji: { fontSize: 22, marginBottom: spacing.xs },
+  mealTypeLabel: {
+    fontSize: typography.size.xs,
+    color: colors.text.secondary,
+    fontWeight: typography.weight.medium,
   },
+  mealTypeLabelSelected: { color: colors.surface, fontWeight: typography.weight.bold },
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.size.md,
+    color: colors.text.primary,
+  },
+  inputError: { borderColor: colors.error },
+  errorText: { fontSize: typography.size.xs, color: colors.error, marginTop: spacing.xs },
+  textArea: { height: 90, textAlignVertical: 'top' },
+  macrosRow: { flexDirection: 'row', gap: spacing.md },
+  macroBlock: { flex: 1, alignItems: 'center' },
+  macroLabel: { fontSize: typography.size.xs, fontWeight: typography.weight.semibold, marginBottom: spacing.xs },
+  macroInput: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    fontSize: typography.size.md,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  macroUnit: { fontSize: typography.size.xs, color: colors.text.light, marginTop: spacing.xs },
+  macroCalcNote: {
+    fontSize: typography.size.xs,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  saveBtn: {
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    ...shadow.md,
+  },
+  saveBtnText: { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.surface },
 });
+
+export default NutritionLogger;

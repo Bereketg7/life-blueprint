@@ -6,216 +6,297 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
+  SafeAreaView,
 } from 'react-native';
-import { useTracking } from '../../context/TrackingContext';
-import { Colors, Typography, Spacing, BorderRadius } from '../../styles/theme';
+import { MentalHealthLog } from '../../types';
+import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
 
 interface Props {
-  onSubmit?: () => void;
+  onSave: (log: Omit<MentalHealthLog, 'id' | 'createdAt'>) => void;
+  onCancel: () => void;
+  userId: string;
 }
 
-const MOOD_EMOJIS: Record<number, string> = {
-  1: '😞', 2: '😞', 3: '😟', 4: '😐', 5: '😐',
-  6: '🙂', 7: '😊', 8: '😄', 9: '😄', 10: '😁',
-};
+const MOOD_OPTIONS = [
+  { value: 1 as const, emoji: '😞', label: 'Very Bad' },
+  { value: 2 as const, emoji: '😐', label: 'Bad' },
+  { value: 3 as const, emoji: '🙂', label: 'Okay' },
+  { value: 4 as const, emoji: '😊', label: 'Good' },
+  { value: 5 as const, emoji: '🤩', label: 'Great' },
+];
 
-export default function MoodTracker({ onSubmit }: Props) {
-  const { logMood } = useTracking();
+type ScaleValue = 1 | 2 | 3 | 4 | 5;
 
-  const [mood, setMood] = useState<number | null>(null);
-  const [stress, setStress] = useState<number | null>(null);
-  const [notes, setNotes] = useState('');
+const ScaleSelector = ({
+  label,
+  value,
+  onChange,
+  lowLabel,
+  highLabel,
+  activeColor,
+}: {
+  label: string;
+  value: ScaleValue;
+  onChange: (v: ScaleValue) => void;
+  lowLabel: string;
+  highLabel: string;
+  activeColor: string;
+}) => (
+  <View style={styles.scaleGroup}>
+    <Text style={styles.sectionLabel}>{label}</Text>
+    <View style={styles.scaleRow}>
+      {([1, 2, 3, 4, 5] as ScaleValue[]).map(n => (
+        <TouchableOpacity
+          key={n}
+          style={[styles.scaleBtn, value === n && { backgroundColor: activeColor, borderColor: activeColor }]}
+          onPress={() => onChange(n)}
+        >
+          <Text style={[styles.scaleBtnText, value === n && styles.scaleBtnTextSelected]}>{n}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+    <View style={styles.scaleLegend}>
+      <Text style={styles.scaleLegendText}>{lowLabel}</Text>
+      <Text style={styles.scaleLegendText}>{highLabel}</Text>
+    </View>
+  </View>
+);
 
-  const handleSubmit = () => {
-    if (mood === null) {
-      Alert.alert('Validation Error', 'Please select your mood level.');
-      return;
-    }
-    if (stress === null) {
-      Alert.alert('Validation Error', 'Please select your stress level.');
-      return;
-    }
+const MoodTracker = ({ onSave, onCancel, userId }: Props) => {
+  const today = new Date().toISOString().split('T')[0];
+  const [mood, setMood] = useState<ScaleValue>(3);
+  const [stressLevel, setStressLevel] = useState<ScaleValue>(3);
+  const [energyLevel, setEnergyLevel] = useState<ScaleValue>(3);
+  const [meditationMinutes, setMeditationMinutes] = useState('');
+  const [journalEntry, setJournalEntry] = useState('');
+  const [gratitude, setGratitude] = useState('');
 
-    logMood({
-      userId: 'current_user',
-      date: new Date().toISOString().split('T')[0],
+  const handleSave = () => {
+    onSave({
+      userId,
+      date: today,
       mood,
-      stress,
-      notes,
+      stressLevel,
+      anxietyLevel: stressLevel,
+      energyLevel,
+      meditationMinutes: parseInt(meditationMinutes) || undefined,
+      journalEntry: journalEntry.trim() || undefined,
+      gratitude: gratitude.trim() || undefined,
     });
-
-    setMood(null);
-    setStress(null);
-    setNotes('');
-
-    Alert.alert('Success', 'Mood logged!');
-    onSubmit?.();
   };
 
+  const selectedMood = MOOD_OPTIONS.find(m => m.value === mood)!;
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Log Mood</Text>
-
-      <Text style={styles.label}>How are you feeling? (1–10)</Text>
-      <View style={styles.scaleRow}>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
-          <TouchableOpacity
-            key={val}
-            style={[styles.moodBtn, mood === val && styles.moodBtnActive]}
-            onPress={() => setMood(val)}
-          >
-            <Text style={styles.moodEmoji}>{MOOD_EMOJIS[val]}</Text>
-            <Text style={[styles.moodNum, mood === val && styles.moodNumActive]}>{val}</Text>
-          </TouchableOpacity>
-        ))}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+          <Text style={styles.cancelText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Log Mood 🧠</Text>
+        <View style={{ width: 36 }} />
       </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Mood selector */}
+        <Text style={styles.sectionLabel}>How are you feeling?</Text>
+        <View style={styles.moodSelectorRow}>
+          {MOOD_OPTIONS.map(m => (
+            <TouchableOpacity
+              key={m.value}
+              style={[styles.moodOption, mood === m.value && styles.moodOptionSelected]}
+              onPress={() => setMood(m.value)}
+            >
+              <Text style={styles.moodEmoji}>{m.emoji}</Text>
+              <Text style={[styles.moodLabel, mood === m.value && styles.moodLabelSelected]}>
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.selectedMoodBadge}>
+          <Text style={styles.selectedMoodText}>
+            {selectedMood.emoji} You're feeling {selectedMood.label.toLowerCase()} today
+          </Text>
+        </View>
 
-      <Text style={styles.label}>Stress Level (1–10)</Text>
-      <View style={styles.stressRow}>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
-          <TouchableOpacity
-            key={val}
-            style={[styles.stressCircle, stress !== null && val <= stress && styles.stressCircleActive]}
-            onPress={() => setStress(val)}
-          >
-            <Text style={[styles.stressNum, stress !== null && val <= stress && styles.stressNumActive]}>
-              {val}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <ScaleSelector
+          label="Stress Level"
+          value={stressLevel}
+          onChange={setStressLevel}
+          lowLabel="Very Low"
+          highLabel="Very High"
+          activeColor={colors.error}
+        />
+
+        <ScaleSelector
+          label="Energy Level"
+          value={energyLevel}
+          onChange={setEnergyLevel}
+          lowLabel="Exhausted"
+          highLabel="Energized"
+          activeColor={colors.warning}
+        />
+
+        <Text style={styles.sectionLabel}>Meditation (minutes)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. 10"
+          value={meditationMinutes}
+          onChangeText={setMeditationMinutes}
+          keyboardType="numeric"
+          placeholderTextColor={colors.text.light}
+        />
+
+        <Text style={styles.sectionLabel}>Journal Entry</Text>
+        <TextInput
+          style={[styles.input, styles.textAreaLarge]}
+          placeholder="What's on your mind today? How did your day go?"
+          value={journalEntry}
+          onChangeText={setJournalEntry}
+          multiline
+          numberOfLines={5}
+          placeholderTextColor={colors.text.light}
+        />
+
+        <Text style={styles.sectionLabel}>Gratitude 🙏</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="What are you grateful for today?"
+          value={gratitude}
+          onChangeText={setGratitude}
+          multiline
+          numberOfLines={3}
+          placeholderTextColor={colors.text.light}
+        />
+      </ScrollView>
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+          <Text style={styles.saveBtnText}>Save Mood Log 🧘</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.stressLabels}>
-        <Text style={styles.stressLabelText}>Low</Text>
-        <Text style={styles.stressLabelText}>High</Text>
-      </View>
-
-      <Text style={styles.label}>Notes (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.notesInput]}
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="What's affecting your mood or stress today?"
-        placeholderTextColor={Colors.text.muted}
-        multiline
-        numberOfLines={3}
-      />
-
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitBtnText}>Log Mood</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    padding: Spacing.md,
-  },
-  title: {
-    fontSize: Typography.sizes.xl,
-    fontWeight: Typography.weights.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    fontSize: Typography.sizes.sm,
-    fontWeight: Typography.weights.medium,
-    color: Colors.text.secondary,
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  scaleRow: {
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  moodBtn: {
     alignItems: 'center',
-    padding: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    minWidth: 28,
-  },
-  moodBtnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.surface,
-  },
-  moodEmoji: {
-    fontSize: 20,
-  },
-  moodNum: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
-    marginTop: 2,
-  },
-  moodNumActive: {
-    color: Colors.primary,
-    fontWeight: Typography.weights.bold,
-  },
-  stressRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  stressCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  cancelBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stressCircleActive: {
-    backgroundColor: Colors.error,
-    borderColor: Colors.error,
+  cancelText: { fontSize: typography.size.md, color: colors.text.secondary },
+  headerTitle: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
-  stressNum: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
-    fontWeight: Typography.weights.medium,
+  scroll: { flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
+  sectionLabel: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
   },
-  stressNumActive: {
-    color: Colors.text.primary,
+  moodSelectorRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  moodOption: {
+    alignItems: 'center',
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flex: 1,
+    marginHorizontal: 2,
   },
-  stressLabels: {
+  moodOptionSelected: {
+    borderColor: colors.secondary,
+    backgroundColor: `${colors.secondary}15`,
+  },
+  moodEmoji: { fontSize: 28, marginBottom: spacing.xs },
+  moodLabel: {
+    fontSize: typography.size.xs,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  moodLabelSelected: { color: colors.secondary, fontWeight: typography.weight.semibold },
+  selectedMoodBadge: {
+    backgroundColor: `${colors.secondary}15`,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    alignItems: 'center',
+  },
+  selectedMoodText: {
+    fontSize: typography.size.sm,
+    color: colors.secondary,
+    fontWeight: typography.weight.semibold,
+  },
+  scaleGroup: { marginTop: spacing.lg },
+  scaleRow: { flexDirection: 'row', gap: spacing.sm },
+  scaleBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+  },
+  scaleBtnText: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.secondary,
+  },
+  scaleBtnTextSelected: { color: colors.surface },
+  scaleLegend: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    marginTop: spacing.xs,
   },
-  stressLabelText: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
-  },
+  scaleLegendText: { fontSize: typography.size.xs, color: colors.text.light },
   input: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    color: Colors.text.primary,
-    fontSize: Typography.sizes.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.size.md,
+    color: colors.text.primary,
   },
-  notesInput: {
-    height: 80,
-    textAlignVertical: 'top',
+  textArea: { height: 90, textAlignVertical: 'top' },
+  textAreaLarge: { height: 130, textAlignVertical: 'top' },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
+  saveBtn: {
+    backgroundColor: colors.secondary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    ...shadow.md,
   },
-  submitBtnText: {
-    color: Colors.text.primary,
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.bold,
-  },
+  saveBtnText: { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.surface },
 });
+
+export default MoodTracker;
