@@ -337,3 +337,277 @@ export interface ConsistencyScore {
   trend: 'improving' | 'declining' | 'stable';
   weeklyBreakdown: number[];
 }
+
+// === WEARABLE TYPES ===
+export interface WearableDevice {
+  id: string;
+  type: 'apple_health' | 'fitbit' | 'garmin' | 'google_fit';
+  name: string;
+  lastSync: string;
+  status: 'connected' | 'disconnected' | 'syncing' | 'error';
+  userId: string;
+}
+
+export interface WearableSyncLog {
+  id: string;
+  deviceId: string;
+  dataImported: number;
+  timestamp: string;
+  success: boolean;
+}
+
+export interface WearableData {
+  steps: number;
+  heartRate: number;
+  sleepDuration: number;
+  caloriesBurned: number;
+  date: string;
+}
+
+// === RECOMMENDATION TYPES ===
+export interface Recommendation {
+  id: string;
+  type: 'workout' | 'nutrition' | 'sleep' | 'mental' | 'training_week';
+  title: string;
+  description: string;
+  confidence: number; // 0-1
+  priority: number; // 1-10
+  reward?: { xp: number; coins: number };
+  createdAt: string;
+}
+
+export interface RecommendationResponse {
+  recommendationId: string;
+  accepted: boolean;
+  feedback?: string;
+  timestamp: string;
+}
+
+// === AI COACH TYPES ===
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  streaming?: boolean;
+}
+
+export interface VoiceCommand {
+  action: 'log_calories' | 'log_activity' | 'log_sleep' | 'check_progress' | 'get_recommendation' | 'unknown';
+  parameters: Record<string, string | number>;
+  confidence: number;
+  rawText: string;
+}
+
+// === QUEST TYPES ===
+export interface Quest {
+  id: string;
+  userId: string;
+  type: 'activity' | 'nutrition' | 'meditation' | 'social' | 'challenge';
+  title: string;
+  description: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  target: number;
+  current: number;
+  reward: QuestReward;
+  status: 'active' | 'completed' | 'expired';
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface QuestReward {
+  xp: number;
+  coins: number;
+  badge?: string;
+}
+
+// === LEVEL TYPES ===
+export interface UserLevel {
+  userId: string;
+  level: number; // 1-100
+  xp: number;
+  xpToNext: number;
+  tier: 'bronze' | 'silver' | 'gold' | 'diamond' | 'platinum' | 'legendary';
+  unlockedFeatures: string[];
+  coins: number;
+}
+
+export interface XpTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  source: 'quest' | 'achievement' | 'streak' | 'challenge' | 'manual';
+  description: string;
+  timestamp: string;
+}
+
+// === BATTLE PASS TYPES ===
+export interface BattlePass {
+  id: string;
+  userId: string;
+  season: number;
+  tier: number; // 1-50
+  progress: number; // XP towards next tier
+  isPremium: boolean;
+  rewards: SeasonalReward[];
+  createdAt: string;
+}
+
+export interface SeasonalReward {
+  id: string;
+  name: string;
+  type: 'xp_boost' | 'badge' | 'title' | 'avatar_frame' | 'coin_bundle';
+  icon: string;
+  tier: number;
+  isPremium: boolean;
+  unlockedAt?: string;
+}
+
+export interface SeasonalChallenge {
+  id: string;
+  title: string;
+  description: string;
+  target: number;
+  current: number;
+  reward: QuestReward;
+  daysRemaining: number;
+  season: number;
+}
+
+// === SOCIAL TYPES ===
+export interface Friend {
+  id: string;
+  userId: string;
+  friendId: string;
+  friendName: string;
+  status: 'pending' | 'accepted' | 'blocked';
+  createdAt: string;
+}
+
+export interface SocialChallenge {
+  id: string;
+  type: 'steps' | 'calories' | 'workouts' | 'sleep' | 'nutrition';
+  title: string;
+  duration: number; // days
+  participants: { userId: string; name: string; score: number }[];
+  leaderboard: { rank: number; userId: string; name: string; score: number }[];
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'completed';
+}
+
+export interface ActivityFeedItem {
+  id: string;
+  userId: string;
+  userName: string;
+  type: 'workout' | 'achievement' | 'quest' | 'level_up' | 'challenge';
+  title: string;
+  description: string;
+  timestamp: string;
+}
+
+// === HEALTHCARE TYPES ===
+export interface DoctorShare {
+  id: string;
+  userId: string;
+  doctorId: string;
+  doctorName: string;
+  permissions: ('activity' | 'nutrition' | 'sleep' | 'vitals' | 'mental' | 'biomarkers')[];
+  createdAt: string;
+  expiresAt?: string;
+}
+
+export interface LabResult {
+  id: string;
+  userId: string;
+  testName: string;
+  value: number;
+  unit: string;
+  referenceRange?: string;
+  date: string;
+  provider: string;
+  isAbnormal: boolean;
+  createdAt: string;
+}
+
+export interface Prescription {
+  id: string;
+  userId: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  startDate: string;
+  endDate?: string;
+  reminderEnabled: boolean;
+  reminderTimes?: string[];
+  notes?: string;
+  createdAt: string;
+}
+
+// === BIOMARKER TYPES ===
+export interface BiomarkerReading {
+  id: string;
+  userId: string;
+  type: 'hrv' | 'vo2max' | 'resting_hr' | 'weight' | 'body_fat' | 'blood_pressure_sys' | 'blood_pressure_dia' | 'spo2';
+  value: number;
+  unit: string;
+  timestamp: string;
+  source: 'manual' | 'wearable' | 'lab';
+  notes?: string;
+}
+
+export interface BiomarkerTrend {
+  type: BiomarkerReading['type'];
+  readings: BiomarkerReading[];
+  baseline: number;
+  current: number;
+  trend: 'improving' | 'declining' | 'stable';
+  alerts: string[];
+}
+
+// === REPORTING TYPES ===
+export interface HealthReport {
+  id: string;
+  userId: string;
+  period: 'weekly' | 'monthly' | 'quarterly';
+  startDate: string;
+  endDate: string;
+  generatedAt: string;
+  pdfUrl?: string;
+  emailSent: boolean;
+  summaryData: {
+    avgSleep: number;
+    totalWorkouts: number;
+    avgCalories: number;
+    avgMood: number;
+    topAchievements: string[];
+  };
+}
+
+// === THEME & ACCESSIBILITY TYPES ===
+export interface AccessibilitySettings {
+  fontSize: 'sm' | 'md' | 'lg' | 'xl';
+  highContrast: boolean;
+  dyslexiaFont: boolean;
+  screenReaderEnabled: boolean;
+  hapticFeedback: boolean;
+  colorBlindMode: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
+}
+
+export interface AppTheme {
+  id: string;
+  name: 'light' | 'dark' | 'high-contrast' | 'dyslexia-friendly' | 'system';
+  colors: {
+    primary: string;
+    secondary: string;
+    background: string;
+    surface: string;
+    text: string;
+    textSecondary: string;
+    border: string;
+    success: string;
+    warning: string;
+    error: string;
+    accent: string;
+  };
+}
