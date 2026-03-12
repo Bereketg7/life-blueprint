@@ -223,3 +223,209 @@ export interface Challenge {
   startDate: string;
   endDate: string;
 }
+
+// ─── Auth & Sync ───────────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  photoUrl?: string;
+  provider: 'email' | 'google' | 'apple';
+  createdAt: string;
+}
+
+export interface SyncJob {
+  id: string;
+  collection: string;
+  operation: 'create' | 'update' | 'delete';
+  data: Record<string, unknown>;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  retryCount: number;
+  createdAt: string;
+  lastAttemptAt?: string;
+  error?: string;
+}
+
+export interface SyncQueue {
+  jobs: SyncJob[];
+  isProcessing: boolean;
+  lastProcessedAt: string | null;
+}
+
+export interface SyncError {
+  jobId: string;
+  message: string;
+  code: string;
+  timestamp: string;
+}
+
+// ─── Wearables ─────────────────────────────────────────────────────────────────
+
+export interface WearableDevice {
+  id: string;
+  type: 'apple_health' | 'fitbit' | 'garmin' | 'whoop' | 'oura';
+  name: string;
+  isConnected: boolean;
+  lastSyncAt: string | null;
+  batteryLevel?: number;
+  authToken?: string;
+}
+
+export interface WearableData {
+  deviceId: string;
+  date: string;
+  steps: number;
+  heartRate: number;
+  caloriesBurned: number;
+  activeMinutes: number;
+  sleepHours?: number;
+  hrvScore?: number;
+}
+
+export interface WearableSyncLog {
+  id: string;
+  deviceId: string;
+  syncedAt: string;
+  recordsImported: number;
+  status: 'success' | 'partial' | 'failed';
+  error?: string;
+}
+
+export interface WearableActivity {
+  id: string;
+  deviceId: string;
+  type: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  caloriesBurned: number;
+  heartRateAvg?: number;
+  heartRateMax?: number;
+  steps?: number;
+  distance?: number;
+}
+
+export interface SleepData {
+  date: string;
+  totalHours: number;
+  deepSleepHours: number;
+  remSleepHours: number;
+  lightSleepHours: number;
+  awakeMinutes: number;
+  efficiency: number;
+}
+
+export interface WearableWorkout {
+  id: string;
+  type: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  caloriesBurned: number;
+  heartRateAvg?: number;
+  source: string;
+}
+
+// ─── Meal Recognition ──────────────────────────────────────────────────────────
+
+export interface MealRecognitionResult {
+  id: string;
+  foodItems: Array<{
+    name: string;
+    confidence: number;
+    portionSize: 'small' | 'medium' | 'large' | 'extra_large';
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }>;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  overallConfidence: number;
+  photoUri: string;
+  analyzedAt: string;
+}
+
+export interface CachedMeal {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  imageUri?: string;
+  frequency: number;
+  lastUsedAt: string;
+  source: 'photo' | 'barcode' | 'manual' | 'preset';
+}
+
+export interface MealPhoto {
+  uri: string;
+  base64?: string;
+  width: number;
+  height: number;
+  capturedAt: string;
+}
+
+export interface NutritionData {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  servingSize?: string;
+  servingUnit?: string;
+}
+
+export interface NutritionixFood {
+  id: string;
+  name: string;
+  brand?: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  servingSize: number;
+  servingUnit: string;
+  imageUrl?: string;
+  barcode?: string;
+}
+
+export interface FoodDetectionResult {
+  name: string;
+  confidence: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+export interface VisionAnalysisResult {
+  labels: Array<{ description: string; score: number }>;
+  objects: Array<{ name: string; score: number }>;
+  safeSearch: Record<string, string>;
+  raw: unknown;
+}
+
+export interface PortionEstimate {
+  foodItem: string;
+  portionSize: 'small' | 'medium' | 'large' | 'extra_large';
+  estimatedGrams: number;
+  confidence: number;
+}
+
+export interface BarcodeResult {
+  barcode: string;
+  format: string;
+  rawValue: string;
+}
