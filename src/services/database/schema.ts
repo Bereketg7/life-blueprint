@@ -1,3 +1,5 @@
+// === CORE TABLES ===
+
 export const CREATE_USERS_TABLE = `
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -73,7 +75,265 @@ export const CREATE_AWARENESS_ENTRIES_TABLE = `
   );
 `;
 
+// === WELLNESS TRACKING TABLES ===
+
+export const CREATE_USER_PROFILE_TABLE = `
+  CREATE TABLE IF NOT EXISTS users_profile (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL UNIQUE,
+    age INTEGER NOT NULL,
+    gender TEXT NOT NULL,
+    height REAL NOT NULL,
+    weight REAL NOT NULL,
+    activityLevel TEXT NOT NULL,
+    primaryGoal TEXT NOT NULL,
+    secondaryGoals TEXT NOT NULL DEFAULT '[]',
+    healthConditions TEXT NOT NULL DEFAULT '[]',
+    dietaryRestrictions TEXT NOT NULL DEFAULT '[]',
+    fitnessLevel TEXT NOT NULL,
+    timeAvailablePerDay INTEGER NOT NULL,
+    sleepGoal REAL NOT NULL,
+    waterGoal INTEGER NOT NULL,
+    calorieGoal INTEGER NOT NULL,
+    proteinGoal INTEGER NOT NULL,
+    carbGoal INTEGER NOT NULL,
+    fatGoal INTEGER NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_ACTIVITY_LOGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS activity_logs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    duration INTEGER NOT NULL,
+    intensity TEXT NOT NULL,
+    caloriesBurned INTEGER NOT NULL,
+    steps INTEGER,
+    heartRateAvg INTEGER,
+    heartRateMax INTEGER,
+    distance REAL,
+    sets INTEGER,
+    reps INTEGER,
+    weight REAL,
+    notes TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_SLEEP_LOGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS sleep_logs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    bedtime TEXT NOT NULL,
+    wakeTime TEXT NOT NULL,
+    duration REAL NOT NULL,
+    quality INTEGER NOT NULL,
+    deepSleep REAL,
+    remSleep REAL,
+    lightSleep REAL,
+    interruptions INTEGER,
+    notes TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_NUTRITION_LOGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS nutrition_logs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    mealType TEXT NOT NULL,
+    foodName TEXT NOT NULL,
+    calories INTEGER NOT NULL,
+    protein REAL NOT NULL,
+    carbs REAL NOT NULL,
+    fat REAL NOT NULL,
+    fiber REAL,
+    sugar REAL,
+    sodium REAL,
+    servingSize TEXT,
+    notes TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_MENTAL_HEALTH_LOGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS mental_health_logs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    mood INTEGER NOT NULL,
+    stressLevel INTEGER NOT NULL,
+    anxietyLevel INTEGER NOT NULL,
+    energyLevel INTEGER NOT NULL,
+    meditationMinutes INTEGER,
+    journalEntry TEXT,
+    triggers TEXT,
+    gratitude TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_VITAL_SIGNS_TABLE = `
+  CREATE TABLE IF NOT EXISTS vital_signs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    heartRate INTEGER,
+    bloodPressureSystolic INTEGER,
+    bloodPressureDiastolic INTEGER,
+    spO2 REAL,
+    temperature REAL,
+    respiratoryRate INTEGER,
+    weight REAL,
+    bodyFat REAL,
+    muscleMass REAL,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_MENSTRUAL_CYCLE_TABLE = `
+  CREATE TABLE IF NOT EXISTS menstrual_cycle (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    flow TEXT,
+    symptoms TEXT,
+    mood INTEGER,
+    painLevel INTEGER,
+    notes TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_SYMPTOMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS symptoms (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    symptomType TEXT NOT NULL,
+    severity INTEGER NOT NULL,
+    location TEXT,
+    description TEXT,
+    possibleTrigger TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_HYDRATION_LOGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS hydration_logs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    beverageType TEXT NOT NULL,
+    time TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_WELLNESS_PLANS_TABLE = `
+  CREATE TABLE IF NOT EXISTS wellness_plans (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    weekNumber INTEGER NOT NULL,
+    startDate TEXT NOT NULL,
+    endDate TEXT NOT NULL,
+    nutritionPlan TEXT NOT NULL DEFAULT '{}',
+    exercisePlan TEXT NOT NULL DEFAULT '{}',
+    recoveryProtocol TEXT NOT NULL DEFAULT '{}',
+    weeklyGoals TEXT NOT NULL DEFAULT '[]',
+    notes TEXT NOT NULL DEFAULT '',
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+// === GAMIFICATION TABLES ===
+
+export const CREATE_ACHIEVEMENTS_TABLE = `
+  CREATE TABLE IF NOT EXISTS achievements (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    category TEXT NOT NULL,
+    requiredValue INTEGER NOT NULL,
+    points INTEGER NOT NULL
+  );
+`;
+
+export const CREATE_USER_ACHIEVEMENTS_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_achievements (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    achievementId TEXT NOT NULL,
+    earnedAt TEXT NOT NULL,
+    progress REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY (userId) REFERENCES users(id),
+    FOREIGN KEY (achievementId) REFERENCES achievements(id)
+  );
+`;
+
+export const CREATE_STREAKS_TABLE = `
+  CREATE TABLE IF NOT EXISTS streaks (
+    userId TEXT PRIMARY KEY,
+    currentStreak INTEGER NOT NULL DEFAULT 0,
+    longestStreak INTEGER NOT NULL DEFAULT 0,
+    lastLogDate TEXT NOT NULL,
+    totalDaysLogged INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_CHALLENGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS challenges (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    type TEXT NOT NULL,
+    target INTEGER NOT NULL,
+    unit TEXT NOT NULL,
+    durationDays INTEGER NOT NULL,
+    startDate TEXT NOT NULL,
+    endDate TEXT NOT NULL,
+    participants INTEGER,
+    reward TEXT NOT NULL
+  );
+`;
+
+export const CREATE_USER_CHALLENGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_challenges (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    challengeId TEXT NOT NULL,
+    joinedAt TEXT NOT NULL,
+    progress REAL NOT NULL DEFAULT 0,
+    completed INTEGER NOT NULL DEFAULT 0,
+    completedAt TEXT,
+    FOREIGN KEY (userId) REFERENCES users(id),
+    FOREIGN KEY (challengeId) REFERENCES challenges(id)
+  );
+`;
+
 export const ALL_SCHEMAS = [
+  // Core tables
   CREATE_USERS_TABLE,
   CREATE_LIFE_AREAS_TABLE,
   CREATE_GOALS_TABLE,
@@ -81,4 +341,21 @@ export const ALL_SCHEMAS = [
   CREATE_PLANS_TABLE,
   CREATE_PLAN_GOALS_TABLE,
   CREATE_AWARENESS_ENTRIES_TABLE,
+  // Wellness tracking tables
+  CREATE_USER_PROFILE_TABLE,
+  CREATE_ACTIVITY_LOGS_TABLE,
+  CREATE_SLEEP_LOGS_TABLE,
+  CREATE_NUTRITION_LOGS_TABLE,
+  CREATE_MENTAL_HEALTH_LOGS_TABLE,
+  CREATE_VITAL_SIGNS_TABLE,
+  CREATE_MENSTRUAL_CYCLE_TABLE,
+  CREATE_SYMPTOMS_TABLE,
+  CREATE_HYDRATION_LOGS_TABLE,
+  CREATE_WELLNESS_PLANS_TABLE,
+  // Gamification tables
+  CREATE_ACHIEVEMENTS_TABLE,
+  CREATE_USER_ACHIEVEMENTS_TABLE,
+  CREATE_STREAKS_TABLE,
+  CREATE_CHALLENGES_TABLE,
+  CREATE_USER_CHALLENGES_TABLE,
 ];

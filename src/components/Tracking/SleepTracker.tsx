@@ -6,279 +6,300 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
+  SafeAreaView,
 } from 'react-native';
-import { useTracking } from '../../context/TrackingContext';
-import { Colors, Typography, Spacing, BorderRadius } from '../../styles/theme';
 import { SleepLog } from '../../types';
-import { detectSleep } from '../../services/sleepDetection';
+import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
 
 interface Props {
-  onSubmit?: () => void;
+  onSave: (log: Omit<SleepLog, 'id' | 'createdAt'>) => void;
+  onCancel: () => void;
+  userId: string;
 }
 
-const HOUR_OPTIONS = [4, 5, 6, 7, 8, 9, 10];
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = [0, 15, 30, 45];
+const MOOD_EMOJIS = ['😴', '😪', '😐', '😊', '🤩'];
+const STAR_LABELS = ['Terrible', 'Poor', 'Fair', 'Good', 'Excellent'];
 
-export default function SleepTracker({ onSubmit }: Props) {
-  const { logSleep } = useTracking();
+const fmt = (n: number) => String(n).padStart(2, '0');
 
-  const [selectedHours, setSelectedHours] = useState<number | null>(null);
-  const [customHours, setCustomHours] = useState('');
-  const [quality, setQuality] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+const calcDuration = (bedH: number, bedM: number, wakeH: number, wakeM: number): number => {
+  const bedMins = bedH * 60 + bedM;
+  const wakeMins = wakeH * 60 + wakeM;
+  const diff = wakeMins >= bedMins ? wakeMins - bedMins : 1440 - bedMins + wakeMins;
+  return Math.round((diff / 60) * 10) / 10;
+};
+
+const buildTimeStr = (h: number, m: number): string => {
+  const now = new Date();
+  now.setHours(h, m, 0, 0);
+  return now.toISOString();
+};
+
+const TimeSelector = ({
+  label,
+  hour,
+  minute,
+  onHourChange,
+  onMinuteChange,
+}: {
+  label: string;
+  hour: number;
+  minute: number;
+  onHourChange: (h: number) => void;
+  onMinuteChange: (m: number) => void;
+}) => (
+  <View style={styles.timeBlock}>
+    <Text style={styles.timeLabel}>{label}</Text>
+    <View style={styles.timeRow}>
+      <ScrollView style={styles.timeScroll} showsVerticalScrollIndicator={false}>
+        {HOURS.map(h => (
+          <TouchableOpacity key={h} style={[styles.timeItem, hour === h && styles.timeItemSelected]} onPress={() => onHourChange(h)}>
+            <Text style={[styles.timeItemText, hour === h && styles.timeItemTextSelected]}>{fmt(h)}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <Text style={styles.timeSep}>:</Text>
+      <ScrollView style={styles.timeScroll} showsVerticalScrollIndicator={false}>
+        {MINUTES.map(m => (
+          <TouchableOpacity key={m} style={[styles.timeItem, minute === m && styles.timeItemSelected]} onPress={() => onMinuteChange(m)}>
+            <Text style={[styles.timeItemText, minute === m && styles.timeItemTextSelected]}>{fmt(m)}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+    <Text style={styles.timeDisplay}>{fmt(hour)}:{fmt(minute)}</Text>
+  </View>
+);
+
+const SleepTracker = ({ onSave, onCancel, userId }: Props) => {
+  const today = new Date().toISOString().split('T')[0];
+  const [bedHour, setBedHour] = useState(22);
+  const [bedMinute, setBedMinute] = useState(0);
+  const [wakeHour, setWakeHour] = useState(6);
+  const [wakeMinute, setWakeMinute] = useState(0);
+  const [quality, setQuality] = useState<1 | 2 | 3 | 4 | 5>(3);
+  const [wakeUpMood, setWakeUpMood] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [notes, setNotes] = useState('');
 
-  const handleDetectSleep = () => {
-    const estimate = detectSleep();
-    const confidenceLabel =
-      estimate.confidence === 'high' ? '🟢 High' :
-      estimate.confidence === 'medium' ? '🟡 Medium' : '🔴 Low';
-    Alert.alert(
-      '😴 Sleep Detected',
-      `Estimated sleep: ${estimate.hoursSlept} hours\nConfidence: ${confidenceLabel}\n\nWould you like to use this?`,
-      [
-        {
-          text: 'Use This',
-          onPress: () => {
-            setSelectedHours(estimate.hoursSlept);
-            setCustomHours('');
-          },
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
+  const duration = calcDuration(bedHour, bedMinute, wakeHour, wakeMinute);
 
-  const handleSubmit = () => {
-    const hoursValue = selectedHours ?? parseFloat(customHours);
-
-    if (isNaN(hoursValue) || hoursValue <= 0 || hoursValue > 24) {
-      Alert.alert('Validation Error', 'Please select or enter a valid hours slept (1-24).');
-      return;
-    }
-    if (quality === null) {
-      Alert.alert('Validation Error', 'Please rate your sleep quality.');
-      return;
-    }
-
-    logSleep({
-      userId: 'current_user',
-      date: new Date().toISOString().split('T')[0],
-      hoursSlept: hoursValue,
+  const handleSave = () => {
+    onSave({
+      userId,
+      date: today,
+      bedtime: buildTimeStr(bedHour, bedMinute),
+      wakeTime: buildTimeStr(wakeHour, wakeMinute),
+      duration,
       quality,
-      notes,
-    } as Omit<SleepLog, 'id' | 'createdAt'>);
-
-    setSelectedHours(null);
-    setCustomHours('');
-    setQuality(null);
-    setNotes('');
-
-    Alert.alert('Success', 'Sleep logged!');
-    onSubmit?.();
+      notes: notes.trim() || undefined,
+    });
   };
-
-  const STAR_LABELS = ['Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Log Sleep</Text>
-
-      {/* Smart detection banner */}
-      <TouchableOpacity style={styles.detectBanner} onPress={handleDetectSleep} activeOpacity={0.8}>
-        <Text style={styles.detectEmoji}>🤖</Text>
-        <View style={styles.detectText}>
-          <Text style={styles.detectTitle}>Detect My Sleep</Text>
-          <Text style={styles.detectHint}>Auto-estimate based on device usage</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+          <Text style={styles.cancelText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Log Sleep 😴</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.durationCard}>
+          <Text style={styles.durationEmoji}>🌙</Text>
+          <Text style={styles.durationValue}>{duration.toFixed(1)}h</Text>
+          <Text style={styles.durationLabel}>Sleep Duration</Text>
         </View>
-        <Text style={styles.detectArrow}>›</Text>
-      </TouchableOpacity>
 
-      <Text style={styles.label}>Hours Slept</Text>
-      <View style={styles.hoursRow}>
-        {HOUR_OPTIONS.map((h) => (
-          <TouchableOpacity
-            key={h}
-            style={[styles.hourBtn, selectedHours === h && styles.hourBtnActive]}
-            onPress={() => {
-              setSelectedHours(h);
-              setCustomHours('');
-            }}
-          >
-            <Text style={[styles.hourBtnText, selectedHours === h && styles.hourBtnTextActive]}>
-              {h}h
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.timePickers}>
+          <TimeSelector
+            label="Bedtime"
+            hour={bedHour}
+            minute={bedMinute}
+            onHourChange={setBedHour}
+            onMinuteChange={setBedMinute}
+          />
+          <TimeSelector
+            label="Wake Time"
+            hour={wakeHour}
+            minute={wakeMinute}
+            onHourChange={setWakeHour}
+            onMinuteChange={setWakeMinute}
+          />
+        </View>
+
+        <Text style={styles.sectionLabel}>Sleep Quality</Text>
+        <View style={styles.starsRow}>
+          {([1, 2, 3, 4, 5] as const).map(n => (
+            <TouchableOpacity key={n} onPress={() => setQuality(n)} style={styles.starBtn}>
+              <Text style={[styles.star, quality >= n && styles.starActive]}>★</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.starLabel}>{STAR_LABELS[quality - 1]}</Text>
+
+        <Text style={styles.sectionLabel}>Mood on Waking</Text>
+        <View style={styles.moodRow}>
+          {([1, 2, 3, 4, 5] as const).map(n => (
+            <TouchableOpacity
+              key={n}
+              style={[styles.moodBtn, wakeUpMood === n && styles.moodBtnSelected]}
+              onPress={() => setWakeUpMood(n)}
+            >
+              <Text style={styles.moodEmoji}>{MOOD_EMOJIS[n - 1]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.sectionLabel}>Notes (optional)</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Dreams, disturbances, how you feel..."
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          numberOfLines={3}
+          placeholderTextColor={colors.text.light}
+        />
+      </ScrollView>
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+          <Text style={styles.saveBtnText}>Save Sleep Log 🌙</Text>
+        </TouchableOpacity>
       </View>
-
-      <TextInput
-        style={styles.input}
-        value={customHours}
-        onChangeText={(v) => {
-          setCustomHours(v);
-          setSelectedHours(null);
-        }}
-        placeholder="Or enter custom hours (e.g. 7.5)"
-        placeholderTextColor={Colors.text.muted}
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Sleep Quality</Text>
-      <View style={styles.starsRow}>
-        {([1, 2, 3, 4, 5] as const).map((star) => (
-          <TouchableOpacity
-            key={star}
-            style={styles.starBtn}
-            onPress={() => setQuality(star)}
-          >
-            <Text style={[styles.starText, quality !== null && star <= quality && styles.starActive]}>
-              ★
-            </Text>
-            <Text style={styles.starLabel}>{STAR_LABELS[star - 1]}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Notes (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.notesInput]}
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="How did you sleep? Any disturbances?"
-        placeholderTextColor={Colors.text.muted}
-        multiline
-        numberOfLines={3}
-      />
-
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitBtnText}>Log Sleep</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    padding: Spacing.md,
-  },
-  title: {
-    fontSize: Typography.sizes.xl,
-    fontWeight: Typography.weights.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.lg,
-  },
-  detectBanner: {
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${Colors.primary}22`,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: `${Colors.primary}55`,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  detectEmoji: { fontSize: 24 },
-  detectText: { flex: 1 },
-  detectTitle: {
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
-    color: Colors.primary,
-  },
-  detectHint: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
-    marginTop: 2,
-  },
-  detectArrow: {
-    fontSize: 22,
-    color: Colors.primary,
-    fontWeight: Typography.weights.bold,
-  },
-  label: {
-    fontSize: Typography.sizes.sm,
-    fontWeight: Typography.weights.medium,
-    color: Colors.text.secondary,
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  hourBtn: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    minWidth: 48,
-    alignItems: 'center',
-  },
-  hourBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  hourBtnText: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.text.secondary,
-    fontWeight: Typography.weights.medium,
-  },
-  hourBtnTextActive: {
-    color: Colors.text.primary,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    color: Colors.text.primary,
-    fontSize: Typography.sizes.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.sm,
-  },
-  starsRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  starBtn: {
+  cancelBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
   },
-  starText: {
-    fontSize: 28,
-    color: Colors.border,
+  cancelText: { fontSize: typography.size.md, color: colors.text.secondary },
+  headerTitle: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
-  starActive: {
-    color: Colors.warning,
+  scroll: { flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
+  durationCard: {
+    backgroundColor: `${colors.category.sleep}15`,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    marginBottom: spacing.xl,
   },
+  durationEmoji: { fontSize: 40, marginBottom: spacing.sm },
+  durationValue: {
+    fontSize: typography.size.xxxl,
+    fontWeight: typography.weight.extrabold,
+    color: colors.category.sleep,
+  },
+  durationLabel: { fontSize: typography.size.sm, color: colors.text.secondary },
+  timePickers: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  timeBlock: { flex: 1, backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, ...shadow.sm },
+  timeLabel: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  timeRow: { flexDirection: 'row', alignItems: 'center', height: 120 },
+  timeScroll: { flex: 1 },
+  timeItem: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: borderRadius.sm,
+  },
+  timeItemSelected: { backgroundColor: `${colors.category.sleep}20` },
+  timeItemText: { fontSize: typography.size.md, color: colors.text.secondary },
+  timeItemTextSelected: { color: colors.category.sleep, fontWeight: typography.weight.bold },
+  timeSep: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.light,
+    marginHorizontal: spacing.xs,
+  },
+  timeDisplay: {
+    textAlign: 'center',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.extrabold,
+    color: colors.category.sleep,
+    marginTop: spacing.sm,
+  },
+  sectionLabel: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  starsRow: { flexDirection: 'row', gap: spacing.md, justifyContent: 'center' },
+  starBtn: { padding: spacing.xs },
+  star: { fontSize: 36, color: colors.disabled },
+  starActive: { color: colors.warning },
   starLabel: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
-    marginTop: 2,
+    textAlign: 'center',
+    fontSize: typography.size.sm,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
   },
-  notesInput: {
-    height: 80,
-    textAlignVertical: 'top',
+  moodRow: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'center' },
+  moodBtn: {
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
+  moodBtnSelected: { borderColor: colors.category.sleep, backgroundColor: `${colors.category.sleep}20` },
+  moodEmoji: { fontSize: 28 },
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.size.md,
+    color: colors.text.primary,
+  },
+  textArea: { height: 90, textAlignVertical: 'top' },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  saveBtn: {
+    backgroundColor: colors.category.sleep,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    ...shadow.md,
   },
-  submitBtnText: {
-    color: Colors.text.primary,
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.bold,
-  },
+  saveBtnText: { fontSize: typography.size.md, fontWeight: typography.weight.bold, color: colors.surface },
 });
+
+export default SleepTracker;
