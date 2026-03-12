@@ -8,7 +8,7 @@ import {
 } from '../services/gamification/seasonManager';
 import { generateSeasonRewards } from '../services/gamification/battlePassRewards';
 
-const MOCK_USER_ID = 'user_1';
+const DEFAULT_USER_ID = 'user_1';
 
 function buildMockChallenges(season: Season): SeasonalChallenge[] {
   const week = getSeasonWeekNumber();
@@ -68,11 +68,9 @@ interface UseBattlePassReturn {
   tierProgress: { currentTier: number; xpToNextTier: number; progressPercent: number };
 }
 
-export function useBattlePass(): UseBattlePassReturn {
+export function useBattlePass(userId: string = DEFAULT_USER_ID): UseBattlePassReturn {
   const [battlePass, setBattlePass] = useState<BattlePass | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const userId = MOCK_USER_ID;
   const currentSeason = getCurrentSeason();
   const daysRemaining = getSeasonDaysRemaining();
 

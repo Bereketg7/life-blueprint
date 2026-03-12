@@ -13,7 +13,7 @@ import {
 } from '../services/gamification/xpManager';
 import { getUnlockedFeatures, getUnlocksAtLevel } from '../services/gamification/unlockables';
 
-const MOCK_USER_ID = 'user_1';
+const DEFAULT_USER_ID = 'user_1';
 
 interface UseLevelReturn {
   level: number;
@@ -31,14 +31,12 @@ interface UseLevelReturn {
   refreshLevel: () => Promise<void>;
 }
 
-export function useLevel(): UseLevelReturn {
+export function useLevel(userId: string = DEFAULT_USER_ID): UseLevelReturn {
   const [totalXp, setTotalXp] = useState(0);
   const [levelHistory, setLevelHistory] = useState<XpTransaction[]>([]);
   const [levelUpVisible, setLevelUpVisible] = useState(false);
   const [levelUpUnlocks, setLevelUpUnlocks] = useState<LevelUnlock[]>([]);
   const [pendingNewLevel, setPendingNewLevel] = useState(1);
-
-  const userId = MOCK_USER_ID;
 
   const refreshLevel = useCallback(async () => {
     const xp = await getTotalXp(userId);

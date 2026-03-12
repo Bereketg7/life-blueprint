@@ -5,16 +5,16 @@ import { generateDailyQuests } from '../services/gamification/questGenerator';
 import { calculateReward, distributeReward, getStreakBonus } from '../services/gamification/questRewards';
 import { awardXp } from '../services/gamification/xpManager';
 
-const MOCK_USER_ID = 'user_1';
-const MOCK_USER_LEVEL = 5;
+const DEFAULT_USER_ID = 'user_1';
+const DEFAULT_USER_LEVEL = 5;
 
 function getTodayString(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function buildMockProfile() {
+function buildMockProfile(userId: string) {
   return {
-    id: MOCK_USER_ID,
+    id: userId,
     name: 'Player',
     age: 25,
     gender: 'other' as const,
@@ -45,13 +45,12 @@ interface UseQuestsReturn {
   refresh: () => void;
 }
 
-export function useQuests(): UseQuestsReturn {
+export function useQuests(userId: string = DEFAULT_USER_ID, userLevel: number = DEFAULT_USER_LEVEL): UseQuestsReturn {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeReward, setActiveReward] = useState<QuestReward | null>(null);
   const [rewardVisible, setRewardVisible] = useState(false);
 
-  const userId = MOCK_USER_ID;
   const today = getTodayString();
 
   const loadQuests = useCallback(async () => {
@@ -60,8 +59,8 @@ export function useQuests(): UseQuestsReturn {
       let dayQuests = questSystem.getDailyQuests(userId, today);
       if (dayQuests.length === 0) {
         const history = await questSystem.getQuestHistory(userId, 7);
-        const profile = buildMockProfile();
-        const generated = generateDailyQuests(profile, history, MOCK_USER_LEVEL);
+        const profile = buildMockProfile(userId);
+        const generated = generateDailyQuests(profile, history, userLevel);
         questSystem.setDailyQuests(userId, today, generated);
         dayQuests = generated;
       }

@@ -21,10 +21,11 @@ export const QuestProgress: React.FC<QuestProgressProps> = ({
       : 0;
 
   useEffect(() => {
+    // scaleX is used instead of width % so useNativeDriver: true is possible
     Animated.timing(animatedValue, {
       toValue: percent,
       duration: 800,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [percent]);
 

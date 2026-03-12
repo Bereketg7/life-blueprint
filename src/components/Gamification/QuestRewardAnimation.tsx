@@ -49,6 +49,8 @@ export const QuestRewardAnimation: React.FC<QuestRewardAnimationProps> = ({
     Array.from({ length: PARTICLE_COUNT }, (_, i) => createParticle(i)),
   ).current;
 
+  // All animated values are stable useRef instances — no reactive deps needed
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const runAnimation = useCallback(() => {
     // Reset
     titleScale.setValue(0);
