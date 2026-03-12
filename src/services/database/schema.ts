@@ -332,6 +332,198 @@ export const CREATE_USER_CHALLENGES_TABLE = `
   );
 `;
 
+// === WEARABLES TABLE ===
+
+export const CREATE_WEARABLE_CONNECTIONS_TABLE = `
+  CREATE TABLE IF NOT EXISTS wearable_connections (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    accessToken TEXT NOT NULL,
+    refreshToken TEXT,
+    tokenExpiry TEXT,
+    deviceId TEXT,
+    deviceName TEXT,
+    lastSyncAt TEXT,
+    isActive INTEGER NOT NULL DEFAULT 1,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_WEARABLE_DATA_TABLE = `
+  CREATE TABLE IF NOT EXISTS wearable_data (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    dataType TEXT NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    metadata TEXT NOT NULL DEFAULT '{}',
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+// === QUESTS TABLE ===
+
+export const CREATE_QUESTS_TABLE = `
+  CREATE TABLE IF NOT EXISTS quests (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    difficulty INTEGER NOT NULL,
+    target INTEGER NOT NULL,
+    current INTEGER NOT NULL DEFAULT 0,
+    rewardXp INTEGER NOT NULL,
+    rewardCoins INTEGER NOT NULL,
+    rewardBadge TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    expiresAt TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+// === LEVELING TABLES ===
+
+export const CREATE_USER_LEVELS_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_levels (
+    userId TEXT PRIMARY KEY,
+    level INTEGER NOT NULL DEFAULT 1,
+    xp INTEGER NOT NULL DEFAULT 0,
+    xpToNext INTEGER NOT NULL DEFAULT 1000,
+    tier TEXT NOT NULL DEFAULT 'bronze',
+    unlockedFeatures TEXT NOT NULL DEFAULT '[]',
+    coins INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_XP_TRANSACTIONS_TABLE = `
+  CREATE TABLE IF NOT EXISTS xp_transactions (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    description TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+// === BATTLE PASS TABLE ===
+
+export const CREATE_BATTLE_PASS_TABLE = `
+  CREATE TABLE IF NOT EXISTS battle_pass (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    season INTEGER NOT NULL,
+    tier INTEGER NOT NULL DEFAULT 0,
+    progress INTEGER NOT NULL DEFAULT 0,
+    isPremium INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+export const CREATE_SEASONAL_REWARDS_TABLE = `
+  CREATE TABLE IF NOT EXISTS seasonal_rewards (
+    id TEXT PRIMARY KEY,
+    battlePassId TEXT NOT NULL,
+    season INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    tier INTEGER NOT NULL,
+    isPremium INTEGER NOT NULL DEFAULT 0,
+    unlockedAt TEXT,
+    FOREIGN KEY (battlePassId) REFERENCES battle_pass(id)
+  );
+`;
+
+export const CREATE_SEASONAL_CHALLENGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS seasonal_challenges (
+    id TEXT PRIMARY KEY,
+    season INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    target INTEGER NOT NULL,
+    current INTEGER NOT NULL DEFAULT 0,
+    rewardXp INTEGER NOT NULL,
+    rewardCoins INTEGER NOT NULL,
+    rewardBadge TEXT,
+    daysRemaining INTEGER NOT NULL,
+    createdAt TEXT NOT NULL
+  );
+`;
+
+// === FRIENDS / SOCIAL TABLES ===
+
+export const CREATE_FRIENDS_TABLE = `
+  CREATE TABLE IF NOT EXISTS friends (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    friendId TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id),
+    FOREIGN KEY (friendId) REFERENCES users(id),
+    UNIQUE(userId, friendId)
+  );
+`;
+
+export const CREATE_SOCIAL_POSTS_TABLE = `
+  CREATE TABLE IF NOT EXISTS social_posts (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    content TEXT NOT NULL,
+    type TEXT NOT NULL,
+    mediaUrl TEXT,
+    likes INTEGER NOT NULL DEFAULT 0,
+    comments INTEGER NOT NULL DEFAULT 0,
+    visibility TEXT NOT NULL DEFAULT 'friends',
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+// === HEALTH REPORTS TABLE ===
+
+export const CREATE_HEALTH_REPORTS_TABLE = `
+  CREATE TABLE IF NOT EXISTS health_reports (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    type TEXT NOT NULL,
+    period TEXT NOT NULL,
+    startDate TEXT NOT NULL,
+    endDate TEXT NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',
+    insights TEXT NOT NULL DEFAULT '[]',
+    generatedAt TEXT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
+// === BIOMARKERS TABLE ===
+
+export const CREATE_BIOMARKER_READINGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS biomarker_readings (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    type TEXT NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    source TEXT NOT NULL,
+    notes TEXT,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
+`;
+
 export const ALL_SCHEMAS = [
   // Core tables
   CREATE_USERS_TABLE,
@@ -358,4 +550,21 @@ export const ALL_SCHEMAS = [
   CREATE_STREAKS_TABLE,
   CREATE_CHALLENGES_TABLE,
   CREATE_USER_CHALLENGES_TABLE,
+  // Wearables
+  CREATE_WEARABLE_CONNECTIONS_TABLE,
+  CREATE_WEARABLE_DATA_TABLE,
+  // Quests & leveling
+  CREATE_QUESTS_TABLE,
+  CREATE_USER_LEVELS_TABLE,
+  CREATE_XP_TRANSACTIONS_TABLE,
+  // Battle pass
+  CREATE_BATTLE_PASS_TABLE,
+  CREATE_SEASONAL_REWARDS_TABLE,
+  CREATE_SEASONAL_CHALLENGES_TABLE,
+  // Social
+  CREATE_FRIENDS_TABLE,
+  CREATE_SOCIAL_POSTS_TABLE,
+  // Reports & biomarkers
+  CREATE_HEALTH_REPORTS_TABLE,
+  CREATE_BIOMARKER_READINGS_TABLE,
 ];
