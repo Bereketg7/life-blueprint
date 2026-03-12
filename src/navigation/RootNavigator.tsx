@@ -164,24 +164,3 @@ const styles = StyleSheet.create({
 });
 
 export default RootNavigator;
-
-    <NavigationContainer>
-      {profile ? (
-        <AppNavigator />
-      ) : (
-        <OnboardingScreen onComplete={() => {}} />
-      )}
-    </NavigationContainer>
-  );
-};
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
-});
-
-export default RootNavigator;
