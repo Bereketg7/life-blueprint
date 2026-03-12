@@ -1,3 +1,5 @@
+// === CORE TYPES ===
+
 export interface User {
   id: string;
   name: string;
@@ -56,25 +58,33 @@ export interface Notification {
 export interface AwarenessEntry {
   id: string;
   lifeAreaId: string;
-  score: number;
   note: string;
   date: string;
   createdAt: string;
 }
 
+// === WELLNESS TRACKING TYPES ===
+
 export interface UserProfile {
   id: string;
-  name: string;
+  userId: string;
   age: number;
-  gender: 'male' | 'female' | 'other';
-  height: number;
-  weight: number;
-  goalType: 'weight_loss' | 'muscle_gain' | 'maintenance' | 'endurance' | 'flexibility';
-  activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extra_active';
-  dietaryPreferences: string[];
+  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+  height: number; // cm
+  weight: number; // kg
+  activityLevel: 'sedentary' | 'lightly-active' | 'moderately-active' | 'very-active' | 'extra-active';
+  primaryGoal: 'weight-loss' | 'muscle-gain' | 'endurance' | 'flexibility' | 'general-wellness' | 'stress-reduction' | 'sleep-improvement';
+  secondaryGoals: string[];
   healthConditions: string[];
-  workoutNotificationsEnabled: boolean;
-  mealNotificationsEnabled: boolean;
+  dietaryRestrictions: string[];
+  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
+  timeAvailablePerDay: number; // minutes
+  sleepGoal: number; // hours
+  waterGoal: number; // ml
+  calorieGoal: number;
+  proteinGoal: number; // grams
+  carbGoal: number; // grams
+  fatGoal: number; // grams
   createdAt: string;
   updatedAt: string;
 }
@@ -83,12 +93,19 @@ export interface ActivityLog {
   id: string;
   userId: string;
   date: string;
-  type: string;
-  duration: number;
-  intensity: 'low' | 'medium' | 'high';
+  type: 'cardio' | 'strength' | 'flexibility' | 'sports' | 'walking' | 'cycling' | 'swimming' | 'yoga' | 'other';
+  name: string;
+  duration: number; // minutes
+  intensity: 'low' | 'moderate' | 'high';
   caloriesBurned: number;
-  notes: string;
-  status: 'completed' | 'skipped' | 'pending';
+  steps?: number;
+  heartRateAvg?: number;
+  heartRateMax?: number;
+  distance?: number; // km
+  sets?: number;
+  reps?: number;
+  weight?: number; // kg
+  notes?: string;
   createdAt: string;
 }
 
@@ -96,9 +113,15 @@ export interface SleepLog {
   id: string;
   userId: string;
   date: string;
-  hoursSlept: number;
+  bedtime: string;
+  wakeTime: string;
+  duration: number; // hours
   quality: 1 | 2 | 3 | 4 | 5;
-  notes: string;
+  deepSleep?: number; // hours
+  remSleep?: number; // hours
+  lightSleep?: number; // hours
+  interruptions?: number;
+  notes?: string;
   createdAt: string;
 }
 
@@ -107,13 +130,17 @@ export interface NutritionLog {
   userId: string;
   date: string;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  foodName: string;
   calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  notes: string;
+  protein: number; // grams
+  carbs: number; // grams
+  fat: number; // grams
+  fiber?: number; // grams
+  sugar?: number; // grams
+  sodium?: number; // mg
+  servingSize?: string;
   photoUri?: string;
-  status: 'logged' | 'estimated';
+  notes?: string;
   createdAt: string;
 }
 
@@ -121,9 +148,14 @@ export interface MentalHealthLog {
   id: string;
   userId: string;
   date: string;
-  mood: number;
-  stress: number;
-  notes: string;
+  mood: 1 | 2 | 3 | 4 | 5; // 1=very bad, 5=excellent
+  stressLevel: 1 | 2 | 3 | 4 | 5; // 1=very low, 5=very high
+  anxietyLevel: 1 | 2 | 3 | 4 | 5;
+  energyLevel: 1 | 2 | 3 | 4 | 5;
+  meditationMinutes?: number;
+  journalEntry?: string;
+  triggers?: string[];
+  gratitude?: string;
   createdAt: string;
 }
 
@@ -131,12 +163,175 @@ export interface VitalSigns {
   id: string;
   userId: string;
   date: string;
-  heartRate: number;
-  bloodPressureSystolic: number;
-  bloodPressureDiastolic: number;
-  weight: number;
+  heartRate?: number; // bpm
+  bloodPressureSystolic?: number; // mmHg
+  bloodPressureDiastolic?: number; // mmHg
+  spO2?: number; // %
+  temperature?: number; // celsius
+  respiratoryRate?: number; // breaths/min
+  weight?: number; // kg
+  bodyFat?: number; // %
+  muscleMass?: number; // %
+  notes?: string;
+  createdAt: string;
+}
+
+export interface MenstrualCycle {
+  id: string;
+  userId: string;
+  date: string;
+  phase: 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
+  flow?: 'none' | 'light' | 'medium' | 'heavy';
+  symptoms?: string[];
+  mood?: number;
+  painLevel?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface SymptomLog {
+  id: string;
+  userId: string;
+  date: string;
+  symptomType: 'pain' | 'fatigue' | 'headache' | 'nausea' | 'digestion' | 'skin' | 'other';
+  severity: 1 | 2 | 3 | 4 | 5;
+  location?: string;
+  description?: string;
+  possibleTrigger?: string;
+  createdAt: string;
+}
+
+export interface HydrationLog {
+  id: string;
+  userId: string;
+  date: string;
+  amount: number; // ml
+  beverageType: 'water' | 'tea' | 'coffee' | 'juice' | 'other';
+  time: string;
+  createdAt: string;
+}
+
+// === GAMIFICATION TYPES ===
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'activity' | 'nutrition' | 'sleep' | 'mental' | 'streak' | 'social' | 'milestone';
+  requiredValue: number;
+  points: number;
+}
+
+export interface UserAchievement {
+  id: string;
+  userId: string;
+  achievementId: string;
+  earnedAt: string;
+  progress: number;
+}
+
+export interface StreakData {
+  userId: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastLogDate: string;
+  totalDaysLogged: number;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlockedAt: string | null;
+  requirement: string;
+}
+
+export interface Streak {
+  currentStreak: number;
+  longestStreak: number;
+  lastLogDate: string;
+  totalDaysLogged: number;
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  type: 'activity' | 'nutrition' | 'sleep' | 'mental' | 'overall';
+  target: number;
+  unit: string;
+  durationDays: number;
+  startDate: string;
+  endDate: string;
+  participants?: number;
+  reward: string;
+}
+
+export interface UserChallenge {
+  id: string;
+  userId: string;
+  challengeId: string;
+  joinedAt: string;
+  progress: number;
+  completed: boolean;
+  completedAt?: string;
+}
+
+// === WELLNESS PLAN TYPES ===
+
+export interface WellnessPlan {
+  id: string;
+  userId: string;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  nutritionPlan: NutritionPlan;
+  exercisePlan: ExercisePlan;
+  recoveryProtocol: RecoveryProtocol;
+  weeklyGoals: string[];
   notes: string;
   createdAt: string;
+}
+
+export interface NutritionPlan {
+  dailyCalories: number;
+  proteinGrams: number;
+  carbGrams: number;
+  fatGrams: number;
+  mealsPerDay: number;
+  mealTiming: string[];
+  hydrationGoal: number;
+  supplements: string[];
+  foodsToAvoid: string[];
+  recommendedFoods: string[];
+}
+
+export interface ExercisePlan {
+  sessionsPerWeek: number;
+  sessionDuration: number; // minutes
+  exercises: PlannedExercise[];
+  intensity: 'low' | 'moderate' | 'high';
+  focus: string;
+  restDays: number[];
+}
+
+export interface PlannedExercise {
+  name: string;
+  type: string;
+  sets?: number;
+  reps?: number;
+  duration?: number;
+  restTime?: number;
+  notes?: string;
+}
+
+export interface RecoveryProtocol {
+  sleepGoal: number; // hours
+  stressManagement: string[];
+  recoveryActivities: string[];
+  supplementRecommendations: string[];
 }
 
 export interface DailyPlanItem {
@@ -162,46 +357,6 @@ export interface WeeklyPlan {
   createdAt: string;
 }
 
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  unlockedAt: string | null;
-  requirement: string;
-}
-
-export interface Achievement {
-  id: string;
-  userId: string;
-  badgeId: string;
-  unlockedAt: string;
-  streakCount: number;
-}
-
-export interface Streak {
-  currentStreak: number;
-  longestStreak: number;
-  lastLogDate: string;
-  totalDaysLogged: number;
-}
-
-export interface HealthProjection {
-  timeframe: '1_month' | '3_months' | '6_months' | '12_months';
-  projectedWeight: number;
-  goalAchievementDate: string;
-  consistencyScore: number;
-  insights: string[];
-}
-
-export interface ConsistencyData {
-  totalItems: number;
-  completedItems: number;
-  skippedItems: number;
-  score: number;
-  trend: 'improving' | 'declining' | 'stable';
-}
-
 export interface CommunityPost {
   id: string;
   userId: string;
@@ -213,13 +368,24 @@ export interface CommunityPost {
   createdAt: string;
 }
 
-export interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  duration: number;
-  participants: number;
-  category: string;
-  startDate: string;
-  endDate: string;
+// === AWARENESS ENGINE TYPES ===
+
+export interface HealthProjection {
+  currentScore: number;
+  projectedScore3Month: number;
+  projectedScore6Month: number;
+  projectedScore1Year: number;
+  goalReachDate: string;
+  keyInsights: string[];
+  warnings: string[];
+}
+
+export interface ConsistencyScore {
+  overall: number; // 0-100
+  activity: number;
+  nutrition: number;
+  sleep: number;
+  mental: number;
+  trend: 'improving' | 'declining' | 'stable';
+  weeklyBreakdown: number[];
 }

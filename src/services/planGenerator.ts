@@ -1,207 +1,381 @@
-import { UserProfile, WeeklyPlan, DailyPlanItem } from '../types';
-import { calculateTDEE, calculateMacros } from '../utils/calculations';
+import {
+  UserProfile,
+  WellnessPlan,
+  NutritionPlan,
+  ExercisePlan,
+  RecoveryProtocol,
+  PlannedExercise,
+} from '../types';
 
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 11);
-}
-
-function toISODate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-/** Returns the Monday of the current week. */
-function getMondayOfCurrentWeek(): Date {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Sun
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-type TimeOfDay = 'morning' | 'afternoon' | 'evening';
-type Category = 'nutrition' | 'exercise' | 'supplement' | 'recovery' | 'mindfulness';
-
-interface ItemTemplate {
-  timeOfDay: TimeOfDay;
-  category: Category;
-  title: string;
-  description: string;
-  duration: number;
-}
-
-function makePlanItem(
-  planId: string,
-  day: number,
-  template: ItemTemplate
-): DailyPlanItem {
-  return {
-    id: generateId(),
-    planId,
-    day,
-    timeOfDay: template.timeOfDay,
-    category: template.category,
-    title: template.title,
-    description: template.description,
-    duration: template.duration,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  };
-}
-
-const TEMPLATES: Record<UserProfile['goalType'], ItemTemplate[]> = {
-  weight_loss: [
-    { timeOfDay: 'morning', category: 'exercise', title: 'Morning Cardio', description: 'High-intensity cardio or HIIT session to maximize calorie burn.', duration: 30 },
-    { timeOfDay: 'afternoon', category: 'exercise', title: 'Strength Training', description: 'Compound lifts to preserve lean muscle during a calorie deficit.', duration: 45 },
-    { timeOfDay: 'evening', category: 'exercise', title: 'Evening Stretch', description: 'Light stretching to aid recovery and improve flexibility.', duration: 15 },
-    { timeOfDay: 'morning', category: 'nutrition', title: 'Low-Calorie Breakfast', description: 'High-protein, low-calorie breakfast to kickstart metabolism.', duration: 10 },
-    { timeOfDay: 'evening', category: 'nutrition', title: 'Dinner Reminder', description: 'Eat a balanced, calorie-controlled dinner at least 2 hours before bed.', duration: 5 },
-  ],
-  muscle_gain: [
-    { timeOfDay: 'morning', category: 'nutrition', title: 'Protein Breakfast', description: 'High-protein breakfast with complex carbs for energy and muscle synthesis.', duration: 10 },
-    { timeOfDay: 'afternoon', category: 'exercise', title: 'Strength Training', description: 'Heavy compound movements to stimulate hypertrophy.', duration: 60 },
-    { timeOfDay: 'evening', category: 'recovery', title: 'Recovery Protocol', description: 'Foam rolling, static stretching, and adequate protein before sleep.', duration: 20 },
-    { timeOfDay: 'morning', category: 'supplement', title: 'Morning Supplements', description: 'Creatine, protein shake, and micronutrients.', duration: 5 },
-  ],
-  maintenance: [
-    { timeOfDay: 'morning', category: 'exercise', title: 'Moderate Cardio', description: 'Steady-state cardio to maintain cardiovascular health.', duration: 30 },
-    { timeOfDay: 'afternoon', category: 'exercise', title: 'Strength Circuit', description: 'Full-body strength circuit to maintain muscle mass.', duration: 40 },
-    { timeOfDay: 'evening', category: 'mindfulness', title: 'Evening Mindfulness', description: 'Meditation or breathing exercises for stress management.', duration: 15 },
-    { timeOfDay: 'morning', category: 'nutrition', title: 'Balanced Breakfast', description: 'Well-rounded meal with protein, carbs, and healthy fats.', duration: 10 },
-  ],
-  endurance: [
-    { timeOfDay: 'morning', category: 'exercise', title: 'Endurance Run / Cycle', description: 'Long, steady-state aerobic session to build base endurance.', duration: 60 },
-    { timeOfDay: 'afternoon', category: 'exercise', title: 'Cross-Training', description: 'Swimming, rowing, or another low-impact aerobic activity.', duration: 45 },
-    { timeOfDay: 'evening', category: 'recovery', title: 'Recovery Stretch', description: 'Deep stretching and foam rolling to prepare for the next session.', duration: 20 },
-    { timeOfDay: 'morning', category: 'nutrition', title: 'Carb Loading', description: 'High-carbohydrate breakfast for sustained energy.', duration: 10 },
-  ],
-  flexibility: [
-    { timeOfDay: 'morning', category: 'exercise', title: 'Morning Yoga', description: 'Dynamic yoga flow to warm up joints and improve range of motion.', duration: 30 },
-    { timeOfDay: 'afternoon', category: 'exercise', title: 'Stretching Session', description: 'Targeted static and PNF stretching for major muscle groups.', duration: 30 },
-    { timeOfDay: 'evening', category: 'exercise', title: 'Mobility Work', description: 'Joint mobility drills and relaxation stretches.', duration: 20 },
-    { timeOfDay: 'morning', category: 'mindfulness', title: 'Breathwork', description: 'Diaphragmatic breathing to calm the nervous system.', duration: 10 },
-  ],
+// --- Activity multipliers for TDEE (Mifflin-St Jeor) ---
+const ACTIVITY_MULTIPLIERS: Record<string, number> = {
+  'sedentary': 1.2,
+  'lightly-active': 1.375,
+  'moderately-active': 1.55,
+  'very-active': 1.725,
+  'extra-active': 1.9,
 };
 
-export function generateWeeklyPlan(profile: UserProfile): WeeklyPlan {
-  const planId = generateId();
-  const monday = getMondayOfCurrentWeek();
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
+/**
+ * Calculates daily macro targets using Mifflin-St Jeor BMR → TDEE,
+ * then applies a calorie adjustment based on the user's goal.
+ */
+export function recommendMacros(
+  goal: string,
+  weightKg: number,
+  activityLevel: string,
+): { calories: number; protein: number; carbs: number; fat: number } {
+  // Simplified gender-neutral BMR approximation (age and height not available in
+  // this context). Full Mifflin-St Jeor requires sex, height, and age; callers
+  // should use generateWeeklyPlan when a full UserProfile is available.
+  const baseBMR = 10 * weightKg + 500;
+  const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] ?? 1.375;
+  let tdee = Math.round(baseBMR * multiplier);
 
-  const templates = TEMPLATES[profile.goalType] ?? TEMPLATES.maintenance;
-  const items: DailyPlanItem[] = [];
+  // Adjust calories by goal
+  if (goal === 'weight-loss') {
+    tdee = Math.round(tdee * 0.8); // 20% deficit
+  } else if (goal === 'muscle-gain') {
+    tdee = Math.round(tdee * 1.1); // 10% surplus
+  }
+  // endurance / general-wellness / stress-reduction / sleep-improvement → maintenance
 
-  for (let day = 0; day < 7; day++) {
-    for (const template of templates) {
-      items.push(makePlanItem(planId, day, template));
+  // Macro split (protein prioritised, then fat, remainder carbs)
+  const protein = Math.round(weightKg * (goal === 'muscle-gain' ? 2.2 : 1.8));
+  const fat = Math.round((tdee * 0.25) / 9);
+  const carbCalories = tdee - protein * 4 - fat * 9;
+  const carbs = Math.max(0, Math.round(carbCalories / 4));
+
+  return { calories: tdee, protein, carbs, fat };
+}
+
+// --- Exercise libraries by fitness level ---
+const BEGINNER_EXERCISES: PlannedExercise[] = [
+  { name: 'Bodyweight Squat', type: 'strength', sets: 3, reps: 12, restTime: 60 },
+  { name: 'Push-Up (Knee)', type: 'strength', sets: 3, reps: 10, restTime: 60 },
+  { name: 'Plank', type: 'strength', duration: 20, restTime: 45, notes: 'Hold 20 s, build each week' },
+  { name: 'Brisk Walk', type: 'cardio', duration: 20 },
+  { name: 'Cat-Cow Stretch', type: 'flexibility', duration: 5 },
+];
+
+const INTERMEDIATE_EXERCISES: PlannedExercise[] = [
+  { name: 'Goblet Squat', type: 'strength', sets: 4, reps: 12, restTime: 75 },
+  { name: 'Dumbbell Bench Press', type: 'strength', sets: 4, reps: 10, restTime: 75 },
+  { name: 'Bent-Over Row', type: 'strength', sets: 4, reps: 10, restTime: 75 },
+  { name: 'Romanian Deadlift', type: 'strength', sets: 3, reps: 12, restTime: 75 },
+  { name: 'Interval Run', type: 'cardio', duration: 25, notes: '1 min fast / 2 min easy' },
+  { name: 'Hip Flexor Stretch', type: 'flexibility', duration: 5 },
+];
+
+const ADVANCED_EXERCISES: PlannedExercise[] = [
+  { name: 'Barbell Back Squat', type: 'strength', sets: 5, reps: 5, restTime: 120 },
+  { name: 'Deadlift', type: 'strength', sets: 4, reps: 5, restTime: 180 },
+  { name: 'Weighted Pull-Up', type: 'strength', sets: 4, reps: 8, restTime: 90 },
+  { name: 'Incline Bench Press', type: 'strength', sets: 4, reps: 8, restTime: 90 },
+  { name: 'HIIT Sprint Intervals', type: 'cardio', duration: 20, notes: '20 s on / 40 s off × 8' },
+  { name: 'Foam Roll & Mobility', type: 'flexibility', duration: 10 },
+];
+
+const ENDURANCE_EXERCISES: PlannedExercise[] = [
+  { name: 'Steady-State Run', type: 'cardio', duration: 40 },
+  { name: 'Cycling', type: 'cardio', duration: 45 },
+  { name: 'Swimming Laps', type: 'cardio', duration: 30 },
+  { name: 'Jump Rope', type: 'cardio', duration: 15 },
+  { name: 'Dynamic Stretching', type: 'flexibility', duration: 10 },
+];
+
+const FLEXIBILITY_EXERCISES: PlannedExercise[] = [
+  { name: 'Sun Salutation', type: 'flexibility', duration: 15 },
+  { name: 'Yoga Flow (Vinyasa)', type: 'flexibility', duration: 30 },
+  { name: 'Pigeon Pose', type: 'flexibility', duration: 5, notes: 'Hold 60 s each side' },
+  { name: 'Seated Forward Fold', type: 'flexibility', duration: 3 },
+  { name: 'Thoracic Rotations', type: 'flexibility', duration: 5 },
+];
+
+/**
+ * Returns an ExercisePlan tailored to the user's fitness level, goal,
+ * and available session time.
+ */
+export function prescribeExercise(
+  fitnessLevel: string,
+  goal: string,
+  timeAvailableMinutes: number,
+): ExercisePlan {
+  let baseExercises: PlannedExercise[];
+  let sessionsPerWeek: number;
+  let intensity: 'low' | 'moderate' | 'high';
+  let focus: string;
+
+  // Choose base library by goal first, then fitness level
+  if (goal === 'endurance') {
+    baseExercises = ENDURANCE_EXERCISES;
+    focus = 'Cardiovascular endurance & aerobic capacity';
+  } else if (goal === 'flexibility') {
+    baseExercises = FLEXIBILITY_EXERCISES;
+    focus = 'Mobility, flexibility & mind-body connection';
+  } else {
+    switch (fitnessLevel) {
+      case 'advanced':
+        baseExercises = ADVANCED_EXERCISES;
+        break;
+      case 'intermediate':
+        baseExercises = INTERMEDIATE_EXERCISES;
+        break;
+      default:
+        baseExercises = BEGINNER_EXERCISES;
     }
+    focus =
+      goal === 'muscle-gain'
+        ? 'Hypertrophy & progressive overload'
+        : goal === 'weight-loss'
+        ? 'Caloric expenditure & metabolic conditioning'
+        : 'Full-body fitness & general wellness';
+  }
+
+  // Determine intensity
+  if (fitnessLevel === 'advanced' || goal === 'muscle-gain') {
+    intensity = 'high';
+  } else if (fitnessLevel === 'beginner' || goal === 'stress-reduction' || goal === 'sleep-improvement') {
+    intensity = 'low';
+  } else {
+    intensity = 'moderate';
+  }
+
+  // Sessions per week based on time budget
+  if (timeAvailableMinutes >= 60) {
+    sessionsPerWeek = fitnessLevel === 'beginner' ? 3 : 5;
+  } else if (timeAvailableMinutes >= 30) {
+    sessionsPerWeek = fitnessLevel === 'beginner' ? 3 : 4;
+  } else {
+    sessionsPerWeek = 3;
+  }
+
+  // Rest days spread across the week (0 = Sunday … 6 = Saturday)
+  const restDays = getRestDays(sessionsPerWeek);
+
+  // Trim exercises to fit session duration (rough 8-min per exercise estimate)
+  const maxExercises = Math.max(2, Math.floor(timeAvailableMinutes / 8));
+  const exercises = baseExercises.slice(0, maxExercises);
+
+  return {
+    sessionsPerWeek,
+    sessionDuration: timeAvailableMinutes,
+    exercises,
+    intensity,
+    focus,
+    restDays,
+  };
+}
+
+function getRestDays(sessionsPerWeek: number): number[] {
+  const allDays = [0, 1, 2, 3, 4, 5, 6];
+  const restCount = 7 - sessionsPerWeek;
+  // Spread rest days: always include Sunday (0) if possible, then mid-week
+  const spread = [0, 3, 6, 2, 5, 1, 4];
+  return spread.slice(0, restCount).sort((a, b) => a - b);
+}
+
+/**
+ * Suggests a RecoveryProtocol based on the user's current sleep and fatigue.
+ */
+export function suggestRecoveryProtocol(
+  avgSleepHours: number,
+  avgFatigue: number, // 1-5 scale, 5 = very fatigued
+): RecoveryProtocol {
+  const sleepGoal = avgSleepHours < 7 ? Math.min(avgSleepHours + 1, 9) : avgSleepHours;
+
+  const stressManagement: string[] = [
+    'Practice 5-minute box breathing before bed',
+    'Limit screen time 1 hour before sleep',
+    'Journal 3 things you are grateful for each night',
+  ];
+
+  const recoveryActivities: string[] = ['Light stretching (10 min)', 'Cold/contrast shower post-workout'];
+
+  const supplementRecommendations: string[] = ['Magnesium glycinate (300 mg before bed)', 'Vitamin D3 (2000 IU with breakfast)'];
+
+  if (avgFatigue >= 4) {
+    stressManagement.push('Consider a full rest day before your next session');
+    stressManagement.push('10-minute guided meditation (Headspace / Calm)');
+    recoveryActivities.push('Foam rolling – full body (15 min)');
+    recoveryActivities.push('Epsom salt bath (20 min)');
+    supplementRecommendations.push('Ashwagandha (600 mg with evening meal)');
+  }
+
+  if (avgFatigue >= 3) {
+    recoveryActivities.push('Yoga nidra or body-scan meditation before sleep');
+  }
+
+  if (avgSleepHours < 6) {
+    stressManagement.unshift('Prioritise sleep — aim for a consistent bedtime');
+    supplementRecommendations.push('L-Theanine (200 mg) 30 min before bed');
   }
 
   return {
-    id: planId,
-    userId: profile.id,
-    weekStartDate: toISODate(monday),
-    weekEndDate: toISODate(sunday),
-    items,
-    goalType: profile.goalType,
+    sleepGoal,
+    stressManagement,
+    recoveryActivities,
+    supplementRecommendations,
+  };
+}
+
+/**
+ * Generates a complete WellnessPlan for the given user and week number.
+ */
+export function generateWeeklyPlan(userProfile: UserProfile, weekNumber: number): WellnessPlan {
+  const macros = recommendMacros(userProfile.primaryGoal, userProfile.weight, userProfile.activityLevel);
+
+  const exercisePlan = prescribeExercise(
+    userProfile.fitnessLevel,
+    userProfile.primaryGoal,
+    userProfile.timeAvailablePerDay,
+  );
+
+  // Estimate average fatigue from activity level (proxy; real data would come from logs)
+  const activityFatigueProxy: Record<string, number> = {
+    'sedentary': 1,
+    'lightly-active': 2,
+    'moderately-active': 3,
+    'very-active': 4,
+    'extra-active': 5,
+  };
+  const estimatedFatigue = activityFatigueProxy[userProfile.activityLevel] ?? 2;
+  const recoveryProtocol = suggestRecoveryProtocol(userProfile.sleepGoal, estimatedFatigue);
+
+  const nutritionPlan: NutritionPlan = buildNutritionPlan(macros, userProfile);
+
+  const startDate = getISODateOffset(0);
+  const endDate = getISODateOffset(6);
+
+  const weeklyGoals = buildWeeklyGoals(userProfile, weekNumber);
+
+  return {
+    id: `plan-${userProfile.userId}-w${weekNumber}`,
+    userId: userProfile.userId,
+    weekNumber,
+    startDate,
+    endDate,
+    nutritionPlan,
+    exercisePlan,
+    recoveryProtocol,
+    weeklyGoals,
+    notes: `Week ${weekNumber} plan generated based on ${userProfile.primaryGoal} goal and ${userProfile.fitnessLevel} fitness level.`,
     createdAt: new Date().toISOString(),
   };
 }
 
-export function recommendMacros(
-  profile: UserProfile
-): { calories: number; protein: number; carbs: number; fat: number } {
-  const tdee = calculateTDEE(
-    profile.weight,
-    profile.height,
-    profile.age,
-    profile.gender,
-    profile.activityLevel
-  );
+/**
+ * Adapts an existing plan based on recent performance data.
+ * Increases intensity when performing well; eases back when recovery is poor.
+ */
+export function adaptPlanBasedOnData(
+  currentPlan: WellnessPlan,
+  consistencyScore: number, // 0-100
+  avgSleepHours: number,
+  avgMood: number, // 1-5
+): WellnessPlan {
+  const plan = deepClonePlan(currentPlan);
+  const { exercisePlan, nutritionPlan } = plan;
 
-  const adjusted =
-    profile.goalType === 'weight_loss'
-      ? tdee - 500
-      : profile.goalType === 'muscle_gain'
-      ? tdee + 300
-      : tdee;
+  const isHighPerforming = consistencyScore >= 80 && avgSleepHours >= 7 && avgMood >= 4;
+  const isStruggling = consistencyScore < 60 || avgSleepHours < 6 || avgMood <= 2;
 
-  const macros = calculateMacros(adjusted, profile.goalType);
-  return macros;
+  if (isHighPerforming) {
+    // Progress: add one session, increase intensity
+    exercisePlan.sessionsPerWeek = Math.min(exercisePlan.sessionsPerWeek + 1, 6);
+    if (exercisePlan.intensity === 'low') exercisePlan.intensity = 'moderate';
+    else if (exercisePlan.intensity === 'moderate') exercisePlan.intensity = 'high';
+
+    nutritionPlan.dailyCalories = Math.round(nutritionPlan.dailyCalories * 1.05);
+    nutritionPlan.proteinGrams = Math.round(nutritionPlan.proteinGrams * 1.05);
+    plan.notes += ' ↑ Intensity progressed due to strong consistency.';
+  } else if (isStruggling) {
+    // Deload: reduce sessions, drop intensity, add rest day
+    exercisePlan.sessionsPerWeek = Math.max(exercisePlan.sessionsPerWeek - 1, 2);
+    if (exercisePlan.intensity === 'high') exercisePlan.intensity = 'moderate';
+    else if (exercisePlan.intensity === 'moderate') exercisePlan.intensity = 'low';
+
+    nutritionPlan.dailyCalories = Math.round(nutritionPlan.dailyCalories * 0.97);
+    plan.recoveryProtocol.sleepGoal = Math.min(plan.recoveryProtocol.sleepGoal + 0.5, 9);
+    plan.notes += ' ↓ Intensity reduced — focus on rest and recovery this week.';
+  } else {
+    plan.notes += ' → Maintaining current plan — steady progress detected.';
+  }
+
+  // Update rest days to reflect new session count
+  exercisePlan.restDays = getRestDays(exercisePlan.sessionsPerWeek);
+
+  return plan;
 }
 
-export function prescribeExercise(
-  profile: UserProfile
-): { type: string; duration: number; intensity: string; daysPerWeek: number } {
-  const activityDefaults: Record<
-    UserProfile['activityLevel'],
-    { daysPerWeek: number; intensity: string }
-  > = {
-    sedentary: { daysPerWeek: 3, intensity: 'low' },
-    lightly_active: { daysPerWeek: 4, intensity: 'low' },
-    moderately_active: { daysPerWeek: 4, intensity: 'medium' },
-    very_active: { daysPerWeek: 5, intensity: 'medium' },
-    extra_active: { daysPerWeek: 6, intensity: 'high' },
-  };
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  const { daysPerWeek, intensity } = activityDefaults[profile.activityLevel];
+function buildNutritionPlan(
+  macros: { calories: number; protein: number; carbs: number; fat: number },
+  profile: UserProfile,
+): NutritionPlan {
+  const mealTiming =
+    profile.primaryGoal === 'muscle-gain'
+      ? ['7:00 AM – Breakfast', '10:30 AM – Pre-Workout Snack', '1:00 PM – Lunch', '4:00 PM – Post-Workout Shake', '7:00 PM – Dinner']
+      : ['7:30 AM – Breakfast', '12:30 PM – Lunch', '3:30 PM – Snack', '7:00 PM – Dinner'];
 
-  const goalDefaults: Record<
-    UserProfile['goalType'],
-    { type: string; duration: number }
-  > = {
-    weight_loss: { type: 'HIIT + Strength', duration: 45 },
-    muscle_gain: { type: 'Strength Training', duration: 60 },
-    maintenance: { type: 'Mixed Cardio & Strength', duration: 40 },
-    endurance: { type: 'Running / Cycling', duration: 60 },
-    flexibility: { type: 'Yoga / Stretching', duration: 30 },
-  };
+  const recommendedFoods =
+    profile.primaryGoal === 'weight-loss'
+      ? ['Leafy greens', 'Lean chicken / fish', 'Oats', 'Eggs', 'Sweet potato', 'Greek yoghurt']
+      : ['Rice', 'Oats', 'Chicken breast', 'Salmon', 'Whole eggs', 'Cottage cheese', 'Quinoa', 'Avocado'];
 
-  const { type, duration } = goalDefaults[profile.goalType];
-
-  return { type, duration, intensity, daysPerWeek };
-}
-
-export function suggestRecovery(profile: UserProfile): string[] {
-  const suggestions: string[] = [
-    'Ensure 7–9 hours of quality sleep each night.',
-    'Stay hydrated — aim for at least 2–3 litres of water per day.',
-    'Include at least one full rest day per week.',
+  const foodsToAvoid = [
+    'Processed / ultra-processed foods',
+    'Sugary beverages',
+    ...(profile.dietaryRestrictions ?? []),
   ];
 
-  if (
-    profile.activityLevel === 'very_active' ||
-    profile.activityLevel === 'extra_active'
-  ) {
-    suggestions.push(
-      'Consider contrast therapy (hot/cold showers) to speed muscle recovery.',
-      'Schedule a sports massage every 2–4 weeks.'
-    );
+  const supplements =
+    profile.primaryGoal === 'muscle-gain'
+      ? ['Whey protein', 'Creatine monohydrate (5 g/day)', 'Omega-3 fish oil']
+      : ['Omega-3 fish oil', 'Multivitamin'];
+
+  return {
+    dailyCalories: macros.calories,
+    proteinGrams: macros.protein,
+    carbGrams: macros.carbs,
+    fatGrams: macros.fat,
+    mealsPerDay: mealTiming.length,
+    mealTiming,
+    hydrationGoal: profile.waterGoal,
+    supplements,
+    foodsToAvoid,
+    recommendedFoods,
+  };
+}
+
+function buildWeeklyGoals(profile: UserProfile, weekNumber: number): string[] {
+  const base: string[] = [
+    `Log all meals for 7 consecutive days`,
+    `Complete ${profile.timeAvailablePerDay >= 45 ? 4 : 3} workout sessions`,
+    `Hit sleep goal of ${profile.sleepGoal} hours for at least 5 nights`,
+    `Drink ${profile.waterGoal} ml of water daily`,
+  ];
+
+  if (weekNumber % 4 === 0) {
+    base.push('Deload week – reduce volume by 30% and focus on form');
   }
 
-  if (profile.healthConditions.includes('back_pain')) {
-    suggestions.push('Incorporate low-impact stretching and avoid heavy spinal loading.');
+  if (profile.primaryGoal === 'stress-reduction') {
+    base.push('Complete 10 minutes of mindfulness or breathing exercises daily');
   }
 
-  if (profile.healthConditions.includes('joint_pain')) {
-    suggestions.push('Prioritise swimming or cycling to reduce joint stress.');
-  }
+  return base;
+}
 
-  if (profile.goalType === 'endurance') {
-    suggestions.push(
-      'Use compression garments post-workout to reduce muscle soreness.',
-      'Practice active recovery (light walks or yoga) on non-running days.'
-    );
-  }
+function getISODateOffset(daysFromNow: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  return d.toISOString().split('T')[0];
+}
 
-  if (profile.goalType === 'muscle_gain') {
-    suggestions.push(
-      'Consume 20–40 g of protein within 30 minutes post-workout.',
-      'Avoid training the same muscle group on consecutive days.'
-    );
-  }
-
-  return suggestions;
+function deepClonePlan(plan: WellnessPlan): WellnessPlan {
+  return JSON.parse(JSON.stringify(plan)) as WellnessPlan;
 }

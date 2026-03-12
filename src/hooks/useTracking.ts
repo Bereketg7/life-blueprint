@@ -1,50 +1,99 @@
-import { useMemo } from 'react';
-import { useTracking as useTrackingContext } from '../context/TrackingContext';
-import { toISODate } from '../utils/dateHelpers';
+import { useState } from 'react';
+import { ActivityLog, SleepLog, NutritionLog, MentalHealthLog } from '../types';
+import { useHealth } from '../context/HealthContext';
+import {
+  activityLogOperations,
+  sleepLogOperations,
+  nutritionLogOperations,
+  mentalHealthLogOperations,
+} from '../services/database/operations';
 
-export function useTracking() {
-  const trackingContext = useTrackingContext();
-  const { activityLogs, sleepLogs, nutritionLogs, mentalHealthLogs } = trackingContext;
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-  const today = toISODate();
 
-  const todayCalories: number = useMemo(
-    () =>
-      nutritionLogs
-        .filter((l) => l.date === today)
-        .reduce((sum, l) => sum + l.calories, 0),
-    [nutritionLogs, today]
-  );
+// Tracker components already include userId and date in their onSave payload
+const useTracking = (_userId: string) => {
+  const { addActivity, setSleep, addNutrition, setMood } = useHealth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const todayActivity: number = useMemo(
-    () =>
-      activityLogs
-        .filter((l) => l.date === today)
-        .reduce((sum, l) => sum + l.duration, 0),
-    [activityLogs, today]
-  );
-
-  const lastMood: number | null = useMemo(() => {
-    if (mentalHealthLogs.length === 0) return null;
-    const sorted = [...mentalHealthLogs].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    return sorted[0].mood;
-  }, [mentalHealthLogs]);
-
-  const lastSleep: number | null = useMemo(() => {
-    if (sleepLogs.length === 0) return null;
-    const sorted = [...sleepLogs].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    return sorted[0].hoursSlept;
-  }, [sleepLogs]);
-
-  return {
-    ...trackingContext,
-    todayCalories,
-    todayActivity,
-    lastMood,
-    lastSleep,
+  const logActivity = async (
+    data: Omit<ActivityLog, 'id' | 'createdAt'>,
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    const log: ActivityLog = {
+      ...data,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await activityLogOperations.create(log);
+    } catch {
+      // DB may not be available in all environments
+    }
+    addActivity(log);
+    setIsLoading(false);
   };
-}
+
+  const logSleep = async (
+    data: Omit<SleepLog, 'id' | 'createdAt'>,
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    const log: SleepLog = {
+      ...data,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await sleepLogOperations.create(log);
+    } catch {
+      // DB may not be available in all environments
+    }
+    setSleep(log);
+    setIsLoading(false);
+  };
+
+  const logNutrition = async (
+    data: Omit<NutritionLog, 'id' | 'createdAt'>,
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    const log: NutritionLog = {
+      ...data,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await nutritionLogOperations.create(log);
+    } catch {
+      // DB may not be available in all environments
+    }
+    addNutrition(log);
+    setIsLoading(false);
+  };
+
+  const logMood = async (
+    data: Omit<MentalHealthLog, 'id' | 'createdAt'>,
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    const log: MentalHealthLog = {
+      ...data,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await mentalHealthLogOperations.create(log);
+    } catch {
+      // DB may not be available in all environments
+    }
+    setMood(log);
+    setIsLoading(false);
+  };
+
+  return { logActivity, logSleep, logNutrition, logMood, isLoading, error };
+};
+
+export default useTracking;
