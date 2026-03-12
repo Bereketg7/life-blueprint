@@ -24,10 +24,13 @@ const STAR_LABELS = ['Terrible', 'Poor', 'Fair', 'Good', 'Excellent'];
 
 const fmt = (n: number) => String(n).padStart(2, '0');
 
+/** Total minutes in a 24-hour day */
+const MINUTES_PER_DAY = 1440;
+
 const calcDuration = (bedH: number, bedM: number, wakeH: number, wakeM: number): number => {
   const bedMins = bedH * 60 + bedM;
   const wakeMins = wakeH * 60 + wakeM;
-  const diff = wakeMins >= bedMins ? wakeMins - bedMins : 1440 - bedMins + wakeMins;
+  const diff = wakeMins >= bedMins ? wakeMins - bedMins : MINUTES_PER_DAY - bedMins + wakeMins;
   return Math.round((diff / 60) * 10) / 10;
 };
 

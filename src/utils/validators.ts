@@ -4,6 +4,7 @@ export function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+// Minimum age of 13 enforces COPPA compliance (Children's Online Privacy Protection Act)
 export function validateAge(age: number): boolean {
   return Number.isFinite(age) && age >= 13 && age <= 120;
 }

@@ -10,6 +10,9 @@ import {
 import { Achievement, UserAchievement } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
 
+// String percentage is valid in RN at runtime; typed alias avoids `as any`.
+type DimensionPercent = `${number}%`;
+
 interface Props {
   achievements: Achievement[];
   userAchievements: UserAchievement[];
@@ -111,7 +114,7 @@ const BadgeDisplay = ({ achievements, userAchievements, totalPoints }: Props) =>
               </Text>
               {!isEarned && progressPct > 0 && (
                 <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBarFill, { width: `${progressPct}%` as any, backgroundColor: catColor }]} />
+                  <View style={[styles.progressBarFill, { width: `${progressPct}%` as DimensionPercent, backgroundColor: catColor }]} />
                 </View>
               )}
               {!isEarned && progressPct > 0 && (

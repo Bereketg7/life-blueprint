@@ -11,7 +11,11 @@ interface ProgressBarProps {
   height?: number;
 }
 
-export default function ProgressBar({
+  // React Native's ViewStyle width accepts DimensionValue (number | string | undefined).
+  // A string percentage like "50%" is valid at runtime but TypeScript's bundled RN
+  // types narrow it to `number | "auto" | ...`; the cast keeps the intent clear.
+  type DimensionPercent = `${number}%`;
+
   value,
   max = 100,
   color = colors.primary,
@@ -35,7 +39,7 @@ export default function ProgressBar({
         <View
           style={[
             styles.fill,
-            { width: `${percentage}%` as any, backgroundColor: color, height },
+            { width: `${percentage}%` as DimensionPercent, backgroundColor: color, height },
           ]}
         />
       </View>
