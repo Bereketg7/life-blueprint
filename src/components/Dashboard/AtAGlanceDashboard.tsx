@@ -17,6 +17,7 @@ import {
   ConsistencyScore,
 } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
+import { getPersonalizedGreeting, getFirstName } from '../../utils/greetings';
 
 interface Props {
   userName?: string;
@@ -41,13 +42,6 @@ const TREND_COLOR: Record<string, string> = {
   stable: colors.warning,
 };
 
-const getGreeting = (): string => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-};
-
 const formatDate = (): string =>
   new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -69,7 +63,7 @@ const AtAGlanceDashboard = ({
   onLogSleep,
   onLogMood,
 }: Props) => {
-  const firstName = userName ?? 'Friend';
+  const firstName = userName ? getFirstName(userName) : 'User';
 
   const totalSteps = todayActivity?.reduce((s, a) => s + (a.steps ?? 0), 0) ?? 0;
   const totalCaloriesBurned = todayActivity?.reduce((s, a) => s + a.caloriesBurned, 0) ?? 0;
@@ -90,7 +84,7 @@ const AtAGlanceDashboard = ({
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>{getGreeting()}, {firstName}! 👋</Text>
+            <Text style={styles.greeting}>{getPersonalizedGreeting(firstName)}! 👋</Text>
             <Text style={styles.date}>{formatDate()}</Text>
           </View>
           {streakData && streakData.currentStreak > 0 && (

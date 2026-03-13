@@ -14,6 +14,7 @@ import { usePlan } from '../../hooks/usePlan';
 import { useUser } from '../../context/UserContext';
 import { useRewards } from '../../hooks/useRewards';
 import { useAwareness } from '../../hooks/useAwareness';
+import { getPersonalizedGreeting, getFirstName } from '../../utils/greetings';
 import HealthSummary from './HealthSummary';
 import QuickActions from './QuickActions';
 import TodaysFocus from './TodaysFocus';
@@ -23,13 +24,6 @@ import NutritionLogger from '../Tracking/NutritionLogger';
 import SleepTracker from '../Tracking/SleepTracker';
 
 type ModalType = 'activity' | 'meal' | 'sleep' | 'mood' | null;
-
-const getGreeting = (): string => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-};
 
 const toISODate = (d = new Date()) => d.toISOString().split('T')[0];
 
@@ -114,7 +108,7 @@ const Dashboard: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.greetingWrap}>
             <Text style={styles.greeting}>
-              {getGreeting()}{profile?.name ? `, ${profile.name}` : ''}! 👋
+              {getPersonalizedGreeting(profile?.name ? getFirstName(profile.name) : 'User')}! 👋
             </Text>
             <Text style={styles.date}>
               {new Date().toLocaleDateString('en-US', {
