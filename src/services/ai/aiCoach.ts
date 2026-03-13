@@ -1,4 +1,5 @@
 import { CoachMessage, VoiceCommand } from '../../types';
+import { IS_OPENAI_CONFIGURED, OPENAI_API_KEY } from '../../config/env';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -16,7 +17,21 @@ const rateLimiter = {
   },
 };
 
-// Keyword-matched response library
+// ── GPT-4 system prompt ───────────────────────────────────────────────────
+
+const SYSTEM_PROMPT = `You are a knowledgeable, encouraging, and empathetic AI health coach for the Life Blueprint wellness app.
+Your role is to help users improve their health across four pillars: exercise, nutrition, sleep, and mental wellness.
+
+Guidelines:
+- Give practical, evidence-based advice tailored to the user's message
+- Be encouraging and non-judgmental
+- Keep responses concise (2-4 sentences unless more detail is requested)
+- Reference specific numbers where helpful (e.g. 150 min/week exercise, 7-9 hrs sleep, 0.8g protein per kg)
+- If asked to log something, acknowledge it clearly
+- Do not provide medical diagnoses; recommend consulting a doctor for medical concerns`;
+
+// ── Keyword-matched response library (fallback) ───────────────────────────
+
 const KEYWORD_RESPONSES: { keywords: string[]; response: string }[] = [
   {
     keywords: ['hello', 'hi', 'hey', 'start'],
@@ -67,7 +82,83 @@ function findKeywordResponse(message: string): string {
   return "That's a great question! As your AI coach, I recommend focusing on consistency in your three pillars: exercise, nutrition, and sleep. Is there a specific area you'd like to dive deeper into?";
 }
 
-// Main chat function
+// ── Real GPT-4 integration ────────────────────────────────────────────────
+
+async function sendWithOpenAI(
+  userMessage: string,
+  history: CoachMessage[],
+  onToken?: (token: string) => void,
+): Promise<CoachMessage> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { OpenAI } = require('openai');
+  // NOTE: dangerouslyAllowBrowser is required for React Native (which is not
+  // a browser environment but triggers the same guard). In production, prefer
+  // routing OpenAI calls through your own backend endpoint so the API key is
+  // never shipped in the app bundle. See .env.example for setup instructions.
+  const client = new OpenAI({ apiKey: OPENAI_API_KEY, dangerouslyAllowBrowser: true });
+
+  const messages = [
+    { role: 'system' as const, content: SYSTEM_PROMPT },
+    ...history.map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    })),
+    { role: 'user' as const, content: userMessage },
+  ];
+
+  if (onToken) {
+    // Streaming response
+    const stream = await client.chat.completions.create({
+      model: 'gpt-4',
+      messages,
+      stream: true,
+      max_tokens: 300,
+    });
+
+    let fullContent = '';
+    for await (const chunk of stream) {
+      const token: string = chunk.choices[0]?.delta?.content ?? '';
+      if (token) {
+        fullContent += token;
+        onToken(token);
+      }
+    }
+
+    return {
+      id: generateId(),
+      role: 'assistant',
+      content: fullContent,
+      timestamp: new Date().toISOString(),
+      streaming: false,
+    };
+  }
+
+  // Non-streaming response
+  const response = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages,
+    max_tokens: 300,
+  });
+
+  return {
+    id: generateId(),
+    role: 'assistant',
+    content: response.choices[0]?.message?.content ?? '',
+    timestamp: new Date().toISOString(),
+    streaming: false,
+  };
+}
+
+// ── Main chat function ────────────────────────────────────────────────────
+
+/**
+ * Send a message to the AI health coach.
+ *
+ * - When OPENAI_API_KEY is set: calls GPT-4 with the full conversation history
+ *   and the Life Blueprint system prompt.
+ * - Otherwise: falls back to keyword-based responses so the app works without
+ *   credentials and all tests continue to pass.
+ */
 export async function sendMessage(
   userMessage: string,
   history: CoachMessage[],
@@ -77,11 +168,17 @@ export async function sendMessage(
     throw new Error('Rate limit exceeded. Please wait before sending another message.');
   }
 
-  void history; // Would use history for GPT-4 context in real implementation
+  if (IS_OPENAI_CONFIGURED) {
+    try {
+      return await sendWithOpenAI(userMessage, history, onToken);
+    } catch (err) {
+      console.warn('[AICoach] OpenAI call failed, using keyword fallback:', err);
+    }
+  }
 
+  // Keyword-matching fallback
   const responseText = findKeywordResponse(userMessage);
 
-  // Simulate streaming
   if (onToken) {
     for await (const token of streamResponse(responseText)) {
       onToken(token);
@@ -97,7 +194,8 @@ export async function sendMessage(
   };
 }
 
-// NLP Voice Command Parser
+// ── NLP Voice Command Parser ──────────────────────────────────────────────
+
 export function parseVoiceCommand(rawText: string): VoiceCommand {
   const text = rawText.toLowerCase().trim();
 
@@ -162,20 +260,44 @@ export function parseVoiceCommand(rawText: string): VoiceCommand {
   };
 }
 
-// TTS/STT wrappers (expo-speech graceful fallback)
+// ── TTS / STT wrappers ────────────────────────────────────────────────────
+
+// expo-speech for text-to-speech
 export const tts = {
   speak: async (text: string): Promise<void> => {
-    // Real impl would use expo-speech
-    void text;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Speech = require('expo-speech');
+      await Speech.speak(text, { language: 'en-US', rate: 0.9 });
+    } catch {
+      // expo-speech not available (e.g. web / test environment)
+      void text;
+    }
   },
-  isSpeaking: async (): Promise<boolean> => false,
-  stop: async (): Promise<void> => {},
+  isSpeaking: async (): Promise<boolean> => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Speech = require('expo-speech');
+      return await Speech.isSpeakingAsync();
+    } catch {
+      return false;
+    }
+  },
+  stop: async (): Promise<void> => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Speech = require('expo-speech');
+      await Speech.stop();
+    } catch {
+      // no-op
+    }
+  },
 };
 
 export const stt = {
   startListening: async (onResult: (text: string) => void): Promise<void> => {
-    // Real impl would use expo-av or react-native-voice
-    // Mock: simulate after 2s
+    // Real STT would use expo-av + a cloud speech API or react-native-voice.
+    // Mock: simulate after 2s so existing tests remain green.
     await new Promise(r => setTimeout(r, 2000));
     onResult('Log 500 calories');
   },
