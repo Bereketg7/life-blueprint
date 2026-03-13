@@ -7,9 +7,14 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { NutritionLog } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
+import { MealPreset } from '../../services/mealPresets';
+import MealPhotoCapture from './MealPhotoCapture';
+import MealConfirmationModal from './MealConfirmationModal';
+import PhotoUploadButton from './PhotoUploadButton';
 
 interface Props {
   onSave: (log: Omit<NutritionLog, 'id' | 'createdAt'>) => void;
@@ -64,6 +69,12 @@ const NutritionLogger = ({ onSave, onCancel, userId }: Props) => {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Photo capture state
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [detectedPreset, setDetectedPreset] = useState<MealPreset | null>(null);
+  const [detectedConfidence, setDetectedConfidence] = useState(0);
+
   const selectedMeal = MEAL_TYPES.find(m => m.value === mealType)!;
 
   const validate = (): boolean => {
@@ -87,6 +98,36 @@ const NutritionLogger = ({ onSave, onCancel, userId }: Props) => {
       fat: parseFloat(fat) || 0,
       notes: notes.trim() || undefined,
     });
+  };
+
+  const handleMealDetected = (preset: MealPreset, confidence: number, photoUri?: string) => {
+    void photoUri; // reserved for future photo preview
+    setDetectedPreset(preset);
+    setDetectedConfidence(confidence);
+    setShowPhotoCapture(false);
+    setConfirming(true);
+  };
+
+  const handleConfirmAccept = (nutrition: {
+    foodName: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }) => {
+    setFoodName(nutrition.foodName);
+    setCalories(String(nutrition.calories));
+    setProtein(String(nutrition.protein));
+    setCarbs(String(nutrition.carbs));
+    setFat(String(nutrition.fat));
+    setErrors({});
+    setConfirming(false);
+    setDetectedPreset(null);
+  };
+
+  const handleConfirmReject = () => {
+    setConfirming(false);
+    setDetectedPreset(null);
   };
 
   const totalMacroCalories =
@@ -123,7 +164,10 @@ const NutritionLogger = ({ onSave, onCancel, userId }: Props) => {
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Food Name *</Text>
+        <View style={styles.foodNameRow}>
+          <Text style={[styles.sectionLabel, styles.foodNameLabel]}>Food Name *</Text>
+          <PhotoUploadButton onPress={() => setShowPhotoCapture(true)} />
+        </View>
         <TextInput
           style={[styles.input, errors.foodName ? styles.inputError : null]}
           placeholder={`What did you have for ${selectedMeal.label.toLowerCase()}?`}
@@ -172,6 +216,31 @@ const NutritionLogger = ({ onSave, onCancel, userId }: Props) => {
           <Text style={styles.saveBtnText}>Save {selectedMeal.label} {selectedMeal.emoji}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Photo Capture Modal */}
+      <Modal visible={showPhotoCapture} animationType="slide" onRequestClose={() => setShowPhotoCapture(false)}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => setShowPhotoCapture(false)} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Identify Meal 📷</Text>
+            <View style={{ width: 36 }} />
+          </View>
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+            <MealPhotoCapture onMealDetected={handleMealDetected} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <MealConfirmationModal
+        visible={confirming}
+        preset={detectedPreset}
+        confidence={detectedConfidence}
+        onAccept={handleConfirmAccept}
+        onReject={handleConfirmReject}
+      />
     </SafeAreaView>
   );
 };
@@ -210,6 +279,18 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.md,
     marginTop: spacing.lg,
+  },
+  foodNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  foodNameLabel: {
+    marginTop: 0,
+    marginBottom: 0,
+    flex: 1,
   },
   mealTypeRow: { flexDirection: 'row', gap: spacing.sm },
   mealTypeBtn: {

@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../../styles/theme';
+import { borderRadius as BorderRadius, colors as Colors, spacing as Spacing, typography as Typography } from '../../styles/theme';
 import { MealPreset, MEAL_PRESETS } from '../../services/mealPresets';
 import { recognizeMealFromPhoto } from '../../services/mealRecognition';
 
 interface MealPhotoCaptureProps {
-  onMealDetected: (preset: MealPreset, photoUri?: string) => void;
+  onMealDetected: (preset: MealPreset, confidence: number, photoUri?: string) => void;
 }
 
 type Tab = 'photo' | 'gallery' | 'quick';
@@ -32,15 +32,9 @@ const MealPhotoCapture: React.FC<MealPhotoCaptureProps> = ({ onMealDetected }) =
     setRecognizing(true);
     try {
       const result = await recognizeMealFromPhoto(photoUri);
-      const pct = Math.round(result.confidence * 100);
-      Alert.alert(
-        '🍽️ Meal Detected',
-        `Identified as "${result.meal.name}" (${pct}% confidence)\n\nCalories: ${result.meal.calories} kcal`,
-        [
-          { text: 'Use This', onPress: () => onMealDetected(result.meal, photoUri) },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+      onMealDetected(result.meal, result.confidence, photoUri);
+    } catch {
+      Alert.alert('Recognition failed', 'Could not identify the meal. Please enter manually.');
     } finally {
       setRecognizing(false);
     }
@@ -81,7 +75,7 @@ const MealPhotoCapture: React.FC<MealPhotoCaptureProps> = ({ onMealDetected }) =
       Alert.alert('Select a meal', 'Please pick a meal from the list first.');
       return;
     }
-    onMealDetected(selectedPreset);
+    onMealDetected(selectedPreset, 1.0);
   };
 
   return (
@@ -186,7 +180,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -205,19 +199,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   tabLabel: {
-    fontSize: Typography.sizes.xs,
+    fontSize: Typography.size.xs,
     color: Colors.text.secondary,
-    fontWeight: Typography.weights.medium,
+    fontWeight: Typography.weight.medium,
   },
   tabLabelActive: {
-    color: Colors.text.primary,
+    color: Colors.surface,
   },
   panel: {
     gap: Spacing.sm,
   },
   panelHint: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.text.muted,
+    fontSize: Typography.size.sm,
+    color: Colors.text.light,
     textAlign: 'center',
   },
   recognizing: {
@@ -226,7 +220,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   recognizingText: {
-    fontSize: Typography.sizes.md,
+    fontSize: Typography.size.md,
     color: Colors.text.secondary,
   },
   captureBtn: {
@@ -246,9 +240,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   captureBtnText: {
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.semibold,
-    color: Colors.text.primary,
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.surface,
   },
   presetList: {
     gap: Spacing.xs,
@@ -258,7 +252,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -270,17 +264,17 @@ const styles = StyleSheet.create({
     backgroundColor: `${Colors.primary}22`,
   },
   presetName: {
-    fontSize: Typography.sizes.sm,
+    fontSize: Typography.size.sm,
     color: Colors.text.secondary,
-    fontWeight: Typography.weights.medium,
+    fontWeight: Typography.weight.medium,
     flex: 1,
   },
   presetNameActive: {
     color: Colors.primary,
   },
   presetCals: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.text.muted,
+    fontSize: Typography.size.xs,
+    color: Colors.text.light,
   },
 });
 
