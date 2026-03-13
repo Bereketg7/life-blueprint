@@ -16,6 +16,7 @@ function makeProfile(overrides: Partial<UserProfile> = {}): UserProfile {
     weight: 75,
     activityLevel: 'moderately-active',
     primaryGoal: 'weight-loss',
+    primaryGoals: ['weight-loss'],
     secondaryGoals: [],
     healthConditions: [],
     dietaryRestrictions: [],

@@ -74,6 +74,7 @@ export interface UserProfile {
   weight: number; // kg
   activityLevel: 'sedentary' | 'lightly-active' | 'moderately-active' | 'very-active' | 'extra-active';
   primaryGoal: 'weight-loss' | 'muscle-gain' | 'endurance' | 'flexibility' | 'general-wellness' | 'stress-reduction' | 'sleep-improvement';
+  primaryGoals: string[];
   secondaryGoals: string[];
   healthConditions: string[];
   dietaryRestrictions: string[];

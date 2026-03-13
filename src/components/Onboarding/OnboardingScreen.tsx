@@ -28,7 +28,7 @@ const HEALTH_CONDITIONS = [
   'IBS', 'Insomnia', 'None of the above',
 ];
 
-const GOALS: { value: UserProfile['primaryGoal']; label: string; emoji: string }[] = [
+const GOALS: { value: string; label: string; emoji: string }[] = [
   { value: 'weight-loss', label: 'Lose Weight', emoji: '🔥' },
   { value: 'muscle-gain', label: 'Build Muscle', emoji: '💪' },
   { value: 'endurance', label: 'Improve Endurance', emoji: '🏃' },
@@ -66,6 +66,7 @@ const OnboardingScreen = ({ onComplete }: Props) => {
   const [profile, setProfile] = useState<OnboardingData>({
     healthConditions: [],
     secondaryGoals: [],
+    primaryGoals: [],
     dietaryRestrictions: [],
     sleepGoal: 8,
     waterGoal: 2500,
@@ -90,6 +91,15 @@ const OnboardingScreen = ({ onComplete }: Props) => {
     }
   };
 
+  const toggleGoal = (goal: string) => {
+    const current = profile.primaryGoals ?? [];
+    if (current.includes(goal)) {
+      update({ primaryGoals: current.filter(g => g !== goal) });
+    } else {
+      update({ primaryGoals: [...current, goal] });
+    }
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (step === 0) {
@@ -103,7 +113,7 @@ const OnboardingScreen = ({ onComplete }: Props) => {
       if (!profile.weight) newErrors.weight = 'Weight is required';
     }
     if (step === 2) {
-      if (!profile.primaryGoal) newErrors.primaryGoal = 'Please select a primary goal';
+      if (!profile.primaryGoals || profile.primaryGoals.length === 0) newErrors.primaryGoals = 'Please select at least one goal';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -235,20 +245,28 @@ const OnboardingScreen = ({ onComplete }: Props) => {
       <Text style={styles.stepTitle}>Your Goals</Text>
       <Text style={styles.stepSubtitle}>What do you want to achieve?</Text>
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Primary Goal *</Text>
-        {GOALS.map(g => (
-          <TouchableOpacity
-            key={g.value}
-            style={[styles.goalCard, profile.primaryGoal === g.value && styles.goalCardSelected]}
-            onPress={() => update({ primaryGoal: g.value })}
-          >
-            <Text style={styles.goalEmoji}>{g.emoji}</Text>
-            <Text style={[styles.goalLabel, profile.primaryGoal === g.value && styles.goalLabelSelected]}>
-              {g.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-        {errors.primaryGoal ? <Text style={styles.errorText}>{errors.primaryGoal}</Text> : null}
+        <Text style={styles.label}>Select Your Goals *</Text>
+        <View style={styles.checkboxGrid}>
+          {GOALS.map(g => {
+            const selected = (profile.primaryGoals ?? []).includes(g.value);
+            return (
+              <TouchableOpacity
+                key={g.value}
+                style={[styles.checkboxItem, selected && styles.checkboxItemSelected]}
+                onPress={() => toggleGoal(g.value)}
+              >
+                <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
+                  {selected && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.goalEmoji}>{g.emoji}</Text>
+                <Text style={[styles.checkboxLabel, selected && styles.checkboxLabelSelected]}>
+                  {g.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {errors.primaryGoals ? <Text style={styles.errorText}>{errors.primaryGoals}</Text> : null}
       </View>
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>Fitness Level</Text>
@@ -352,7 +370,9 @@ const OnboardingScreen = ({ onComplete }: Props) => {
   );
 
   const renderStep5 = () => {
-    const goalLabel = GOALS.find(g => g.value === profile.primaryGoal)?.label ?? '—';
+    const goalsLabel = (profile.primaryGoals ?? [])
+      .map(v => GOALS.find(g => g.value === v)?.label ?? v)
+      .join(', ') || '—';
     const fitnessLabel = FITNESS_LEVELS.find(f => f.value === profile.fitnessLevel)?.label ?? '—';
     const conditions = (profile.healthConditions ?? []).join(', ') || 'None';
 
@@ -366,7 +386,7 @@ const OnboardingScreen = ({ onComplete }: Props) => {
           <SummaryRow icon="📧" label="Email" value={profile.email ?? '—'} />
           <SummaryRow icon="🎂" label="Age" value={profile.age ? `${profile.age} years` : '—'} />
           <SummaryRow icon="⚖️" label="Height / Weight" value={profile.height && profile.weight ? `${profile.height} cm / ${profile.weight} kg` : '—'} />
-          <SummaryRow icon="🎯" label="Primary Goal" value={goalLabel} />
+          <SummaryRow icon="🎯" label="Goals" value={goalsLabel} />
           <SummaryRow icon="💪" label="Fitness Level" value={fitnessLabel} />
           <SummaryRow icon="🏥" label="Health Conditions" value={conditions} />
           <SummaryRow icon="⏰" label="Daily Time" value={`${profile.timeAvailablePerDay ?? 30} min`} />

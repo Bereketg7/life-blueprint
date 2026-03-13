@@ -3,8 +3,8 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { BorderRadius, Colors, Spacing, Typography } from '../../styles/theme';
 
 interface GoalSelectionProps {
-  selectedGoal: string;
-  onSelect: (goal: string) => void;
+  selectedGoals: string[];
+  onToggle: (goal: string) => void;
 }
 
 const GOALS = [
@@ -40,20 +40,20 @@ const GOALS = [
   },
 ];
 
-const GoalSelection: React.FC<GoalSelectionProps> = ({ selectedGoal, onSelect }) => {
+const GoalSelection: React.FC<GoalSelectionProps> = ({ selectedGoals, onToggle }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Choose Your Goal</Text>
-      <Text style={styles.subtitle}>Select the primary goal you want to achieve</Text>
+      <Text style={styles.sectionTitle}>Choose Your Goals</Text>
+      <Text style={styles.subtitle}>Select all goals you want to achieve</Text>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {GOALS.map((goal) => {
-          const active = selectedGoal === goal.id;
+          const active = selectedGoals.includes(goal.id);
           return (
             <TouchableOpacity
               key={goal.id}
               style={[styles.card, active && styles.cardActive]}
-              onPress={() => onSelect(goal.id)}
+              onPress={() => onToggle(goal.id)}
               activeOpacity={0.8}
             >
               <Text style={styles.emoji}>{goal.emoji}</Text>
@@ -61,8 +61,8 @@ const GoalSelection: React.FC<GoalSelectionProps> = ({ selectedGoal, onSelect })
                 <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{goal.label}</Text>
                 <Text style={styles.goalDesc}>{goal.description}</Text>
               </View>
-              <View style={[styles.radio, active && styles.radioActive]}>
-                {active && <View style={styles.radioDot} />}
+              <View style={[styles.checkbox, active && styles.checkboxActive]}>
+                {active && <Text style={styles.checkmark}>✓</Text>}
               </View>
             </TouchableOpacity>
           );
@@ -124,23 +124,23 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     lineHeight: 18,
   },
-  radio: {
+  checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: BorderRadius.sm,
     borderWidth: 2,
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioActive: {
+  checkboxActive: {
+    backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
+  checkmark: {
+    color: '#ffffff',
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
   },
 });
 
