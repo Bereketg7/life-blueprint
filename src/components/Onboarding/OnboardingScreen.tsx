@@ -716,4 +716,8 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OnboardingScreen;
+/** @deprecated Use StreamlinedOnboarding for the new 3-step flow. */
+export { OnboardingScreen as LegacyOnboardingScreen };
+
+// ─── Re-export the streamlined 3-step onboarding as the default ──────────────
+export { default } from './StreamlinedOnboarding';

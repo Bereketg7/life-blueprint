@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { ActivityLog } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
+import { useActivityDetection } from '../../hooks/useActivityDetection';
+import ActivityDetectionOverlay from './ActivityDetectionOverlay';
 
 interface Props {
   onSave: (log: Omit<ActivityLog, 'id' | 'createdAt'>) => void;
@@ -66,6 +68,9 @@ const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props)
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { detection, detecting, startDetection, stopDetection, reset: resetDetection } =
+    useActivityDetection();
+
   const durationNum = parseInt(duration) || 0;
   const caloriesBurned = durationNum > 0 ? calcCalories(activityType, durationNum, intensity, userWeightKg) : 0;
   const activityName = ACTIVITY_TYPES.find(a => a.value === activityType)?.label ?? 'Activity';
@@ -101,6 +106,25 @@ const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props)
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Auto-detection banner / overlay */}
+        <ActivityDetectionOverlay
+          detection={detection}
+          detecting={detecting}
+          onAccept={type => { setActivityType(type); resetDetection(); }}
+          onDismiss={resetDetection}
+          onRetry={() => startDetection(activityType)}
+        />
+
+        {/* Detect button — shown when not yet detecting */}
+        {!detecting && !detection && (
+          <TouchableOpacity
+            style={styles.detectBtn}
+            onPress={() => startDetection(activityType)}
+          >
+            <Text style={styles.detectBtnText}>🔍 Auto-detect activity</Text>
+          </TouchableOpacity>
+        )}
+
         <Text style={styles.sectionLabel}>Activity Type</Text>
         <View style={styles.typeGrid}>
           {ACTIVITY_TYPES.map(a => (
@@ -296,6 +320,21 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
     fontWeight: typography.weight.bold,
     color: colors.surface,
+  },
+  detectBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    backgroundColor: `${colors.primary}08`,
+  },
+  detectBtnText: {
+    fontSize: typography.size.sm,
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
   },
 });
 

@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { MentalHealthLog } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
+import { useMoodSuggestion } from '../../hooks/useMoodSuggestion';
+import MoodSuggestionCard from './MoodSuggestionCard';
 
 interface Props {
   onSave: (log: Omit<MentalHealthLog, 'id' | 'createdAt'>) => void;
@@ -66,6 +68,8 @@ const MoodTracker = ({ onSave, onCancel, userId }: Props) => {
   const today = new Date().toISOString().split('T')[0];
   const [mood, setMood] = useState<ScaleValue>(3);
   const [stressLevel, setStressLevel] = useState<ScaleValue>(3);
+  const { suggestion, loading: suggestionLoading } = useMoodSuggestion();
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const [energyLevel, setEnergyLevel] = useState<ScaleValue>(3);
   const [meditationMinutes, setMeditationMinutes] = useState('');
   const [journalEntry, setJournalEntry] = useState('');
@@ -97,6 +101,14 @@ const MoodTracker = ({ onSave, onCancel, userId }: Props) => {
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Smart mood suggestion */}
+        <MoodSuggestionCard
+          suggestion={suggestion}
+          loading={suggestionLoading}
+          onAccept={v => { setMood(v); setSuggestionDismissed(true); }}
+          onDismiss={() => setSuggestionDismissed(true)}
+          dismissed={suggestionDismissed}
+        />
         {/* Mood selector */}
         <Text style={styles.sectionLabel}>How are you feeling?</Text>
         <View style={styles.moodSelectorRow}>
