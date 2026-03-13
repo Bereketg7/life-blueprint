@@ -1,5 +1,15 @@
 // === CORE TYPES ===
 
+/** Emoji-based mood mapping for Quick Mood Selector */
+export const MOOD_EMOJIS = [
+  { emoji: '😢', value: 1 as const, label: 'Very Bad' },
+  { emoji: '😐', value: 2 as const, label: 'Neutral' },
+  { emoji: '😊', value: 3 as const, label: 'Good' },
+  { emoji: '🤩', value: 4 as const, label: 'Excellent' },
+] as const;
+
+export type MoodEmojiValue = 1 | 2 | 3 | 4;
+
 export interface User {
   id: string;
   name: string;

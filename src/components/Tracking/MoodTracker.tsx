@@ -10,20 +10,13 @@ import {
 } from 'react-native';
 import { MentalHealthLog } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
+import QuickMoodSelector, { MoodValue } from './QuickMoodSelector';
 
 interface Props {
   onSave: (log: Omit<MentalHealthLog, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
   userId: string;
 }
-
-const MOOD_OPTIONS = [
-  { value: 1 as const, emoji: '😞', label: 'Very Bad' },
-  { value: 2 as const, emoji: '😐', label: 'Bad' },
-  { value: 3 as const, emoji: '🙂', label: 'Okay' },
-  { value: 4 as const, emoji: '😊', label: 'Good' },
-  { value: 5 as const, emoji: '🤩', label: 'Great' },
-];
 
 type ScaleValue = 1 | 2 | 3 | 4 | 5;
 
@@ -64,7 +57,7 @@ const ScaleSelector = ({
 
 const MoodTracker = ({ onSave, onCancel, userId }: Props) => {
   const today = new Date().toISOString().split('T')[0];
-  const [mood, setMood] = useState<ScaleValue>(3);
+  const [mood, setMood] = useState<MoodValue>(3);
   const [stressLevel, setStressLevel] = useState<ScaleValue>(3);
   const [energyLevel, setEnergyLevel] = useState<ScaleValue>(3);
   const [meditationMinutes, setMeditationMinutes] = useState('');
@@ -85,7 +78,78 @@ const MoodTracker = ({ onSave, onCancel, userId }: Props) => {
     });
   };
 
-  const selectedMood = MOOD_OPTIONS.find(m => m.value === mood)!;
+  const expandableSections = [
+    {
+      key: 'stress',
+      label: 'How stressed? 😰',
+      children: (
+        <ScaleSelector
+          label=""
+          value={stressLevel}
+          onChange={setStressLevel}
+          lowLabel="Very Low"
+          highLabel="Very High"
+          activeColor={colors.error}
+        />
+      ),
+    },
+    {
+      key: 'energy',
+      label: 'Energy level? ⚡',
+      children: (
+        <ScaleSelector
+          label=""
+          value={energyLevel}
+          onChange={setEnergyLevel}
+          lowLabel="Exhausted"
+          highLabel="Energized"
+          activeColor={colors.warning}
+        />
+      ),
+    },
+    {
+      key: 'meditation',
+      label: 'Meditation? 🧘',
+      children: (
+        <View style={{ paddingTop: spacing.sm }}>
+          <TextInput
+            style={styles.input}
+            placeholder="Minutes (e.g. 10)"
+            value={meditationMinutes}
+            onChangeText={setMeditationMinutes}
+            keyboardType="numeric"
+            placeholderTextColor={colors.text.light}
+          />
+        </View>
+      ),
+    },
+    {
+      key: 'journal',
+      label: 'Journal entry? 📝',
+      children: (
+        <View style={{ paddingTop: spacing.sm, gap: spacing.md }}>
+          <TextInput
+            style={[styles.input, styles.textAreaLarge]}
+            placeholder="What's on your mind today?"
+            value={journalEntry}
+            onChangeText={setJournalEntry}
+            multiline
+            numberOfLines={4}
+            placeholderTextColor={colors.text.light}
+          />
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Gratitude 🙏 — What are you grateful for?"
+            value={gratitude}
+            onChangeText={setGratitude}
+            multiline
+            numberOfLines={3}
+            placeholderTextColor={colors.text.light}
+          />
+        </View>
+      ),
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -97,76 +161,11 @@ const MoodTracker = ({ onSave, onCancel, userId }: Props) => {
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Mood selector */}
         <Text style={styles.sectionLabel}>How are you feeling?</Text>
-        <View style={styles.moodSelectorRow}>
-          {MOOD_OPTIONS.map(m => (
-            <TouchableOpacity
-              key={m.value}
-              style={[styles.moodOption, mood === m.value && styles.moodOptionSelected]}
-              onPress={() => setMood(m.value)}
-            >
-              <Text style={styles.moodEmoji}>{m.emoji}</Text>
-              <Text style={[styles.moodLabel, mood === m.value && styles.moodLabelSelected]}>
-                {m.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.selectedMoodBadge}>
-          <Text style={styles.selectedMoodText}>
-            {selectedMood.emoji} You're feeling {selectedMood.label.toLowerCase()} today
-          </Text>
-        </View>
-
-        <ScaleSelector
-          label="Stress Level"
-          value={stressLevel}
-          onChange={setStressLevel}
-          lowLabel="Very Low"
-          highLabel="Very High"
-          activeColor={colors.error}
-        />
-
-        <ScaleSelector
-          label="Energy Level"
-          value={energyLevel}
-          onChange={setEnergyLevel}
-          lowLabel="Exhausted"
-          highLabel="Energized"
-          activeColor={colors.warning}
-        />
-
-        <Text style={styles.sectionLabel}>Meditation (minutes)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 10"
-          value={meditationMinutes}
-          onChangeText={setMeditationMinutes}
-          keyboardType="numeric"
-          placeholderTextColor={colors.text.light}
-        />
-
-        <Text style={styles.sectionLabel}>Journal Entry</Text>
-        <TextInput
-          style={[styles.input, styles.textAreaLarge]}
-          placeholder="What's on your mind today? How did your day go?"
-          value={journalEntry}
-          onChangeText={setJournalEntry}
-          multiline
-          numberOfLines={5}
-          placeholderTextColor={colors.text.light}
-        />
-
-        <Text style={styles.sectionLabel}>Gratitude 🙏</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="What are you grateful for today?"
-          value={gratitude}
-          onChangeText={setGratitude}
-          multiline
-          numberOfLines={3}
-          placeholderTextColor={colors.text.light}
+        <QuickMoodSelector
+          mood={mood}
+          onMoodChange={setMood}
+          expandableSections={expandableSections}
         />
       </ScrollView>
       <View style={styles.footer}>
@@ -212,40 +211,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.md,
     marginTop: spacing.lg,
-  },
-  moodSelectorRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  moodOption: {
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    flex: 1,
-    marginHorizontal: 2,
-  },
-  moodOptionSelected: {
-    borderColor: colors.secondary,
-    backgroundColor: `${colors.secondary}15`,
-  },
-  moodEmoji: { fontSize: 28, marginBottom: spacing.xs },
-  moodLabel: {
-    fontSize: typography.size.xs,
-    color: colors.text.secondary,
-    textAlign: 'center',
-  },
-  moodLabelSelected: { color: colors.secondary, fontWeight: typography.weight.semibold },
-  selectedMoodBadge: {
-    backgroundColor: `${colors.secondary}15`,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-    alignItems: 'center',
-  },
-  selectedMoodText: {
-    fontSize: typography.size.sm,
-    color: colors.secondary,
-    fontWeight: typography.weight.semibold,
   },
   scaleGroup: { marginTop: spacing.lg },
   scaleRow: { flexDirection: 'row', gap: spacing.sm },

@@ -9,10 +9,12 @@ import {
   SafeAreaView,
   TextInput,
   Modal,
+  Platform,
 } from 'react-native';
 import { useHealth } from '../context/HealthContext';
 import { colors, typography, spacing, borderRadius, shadow } from '../styles/theme';
-import { UserProfile } from '../types';
+import { UserProfile, WearableDevice } from '../types';
+import { useWearableSync } from '../hooks/useWearableSync';
 
 const StatBox = ({ label, value }: { label: string; value: string | number }) => (
   <View style={styles.statBox}>
@@ -25,6 +27,10 @@ const ProfileScreen = () => {
   const { userProfile, setUserProfile, todayActivity, todaySleep, streakData } = useHealth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
+
+  const userId = userProfile?.userId ?? 'guest';
+  const weightKg = userProfile?.weight ?? 70;
+  const { devices, syncLogs, syncing, connectDevice, syncNow, disconnectDevice } = useWearableSync(userId, weightKg);
 
   // Editable profile state mirrors the saved profile
   const [editHeight, setEditHeight] = useState(userProfile?.height.toString() ?? '');
@@ -141,6 +147,91 @@ const ProfileScreen = () => {
         <TouchableOpacity style={styles.editButton} onPress={openEdit}>
           <Text style={styles.editButtonText}>✏️  Edit Profile</Text>
         </TouchableOpacity>
+
+        {/* Wearables */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>🔗 Connected Devices</Text>
+          <Text style={styles.wearableSubtitle}>
+            Auto-sync steps, sleep & workouts — no manual entry needed
+          </Text>
+
+          {/* Connect buttons */}
+          <View style={styles.wearableBtnRow}>
+            {Platform.OS === 'ios' && !devices.some(d => d.type === 'apple_health') && (
+              <TouchableOpacity
+                style={styles.wearableConnectBtn}
+                onPress={() => connectDevice('apple_health', 'Apple Health')}
+              >
+                <Text style={styles.wearableConnectBtnText}>+ Connect Apple Health</Text>
+              </TouchableOpacity>
+            )}
+            {Platform.OS === 'android' && !devices.some(d => d.type === 'google_fit') && (
+              <TouchableOpacity
+                style={styles.wearableConnectBtn}
+                onPress={() => connectDevice('google_fit', 'Google Fit')}
+              >
+                <Text style={styles.wearableConnectBtnText}>+ Connect Google Fit</Text>
+              </TouchableOpacity>
+            )}
+            {!devices.some(d => d.type === 'fitbit') && (
+              <TouchableOpacity
+                style={styles.wearableConnectBtn}
+                onPress={() => connectDevice('fitbit', 'Fitbit')}
+              >
+                <Text style={styles.wearableConnectBtnText}>+ Connect Fitbit</Text>
+              </TouchableOpacity>
+            )}
+            {!devices.some(d => d.type === 'garmin') && (
+              <TouchableOpacity
+                style={styles.wearableConnectBtn}
+                onPress={() => connectDevice('garmin', 'Garmin')}
+              >
+                <Text style={styles.wearableConnectBtnText}>+ Connect Garmin</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Connected device list */}
+          {devices.map((device: WearableDevice) => {
+            const lastSyncLabel = device.lastSync
+              ? new Date(device.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'Never';
+            const lastLog = syncLogs.find(l => l.deviceId === device.id);
+            return (
+              <View key={device.id} style={styles.deviceRow}>
+                <View style={styles.deviceInfo}>
+                  <Text style={styles.deviceName}>{device.name}</Text>
+                  <Text style={styles.deviceStatus}>
+                    {device.status === 'connected' ? '🟢 Connected' : '🔴 Disconnected'}
+                    {' · '}Last sync: {lastSyncLabel}
+                    {lastLog ? ` · ${lastLog.dataImported} data points` : ''}
+                  </Text>
+                </View>
+                <View style={styles.deviceActions}>
+                  <TouchableOpacity
+                    style={[styles.syncBtn, syncing && styles.syncBtnDisabled]}
+                    onPress={() => syncNow(device)}
+                    disabled={syncing}
+                  >
+                    <Text style={styles.syncBtnText}>{syncing ? '⟳' : '↻ Sync'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.disconnectBtn}
+                    onPress={() => disconnectDevice(device.id)}
+                  >
+                    <Text style={styles.disconnectBtnText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+
+          {devices.length === 0 && (
+            <Text style={styles.wearableEmptyText}>
+              No devices connected. Connect a wearable to auto-import your health data.
+            </Text>
+          )}
+        </View>
 
         {/* App settings */}
         <View style={styles.card}>
@@ -412,6 +503,84 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: typography.size.md,
     color: colors.text.secondary,
+  },
+  wearableSubtitle: {
+    fontSize: typography.size.xs,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+  },
+  wearableBtnRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  wearableConnectBtn: {
+    backgroundColor: `${colors.primary}15`,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  wearableConnectBtnText: {
+    fontSize: typography.size.xs,
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
+  },
+  deviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  deviceInfo: { flex: 1 },
+  deviceName: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  deviceStatus: {
+    fontSize: typography.size.xs,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  deviceActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  syncBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  syncBtnDisabled: { backgroundColor: colors.disabled },
+  syncBtnText: {
+    fontSize: typography.size.xs,
+    color: colors.surface,
+    fontWeight: typography.weight.semibold,
+  },
+  disconnectBtn: {
+    backgroundColor: `${colors.error}15`,
+    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  disconnectBtnText: {
+    fontSize: typography.size.xs,
+    color: colors.error,
+    fontWeight: typography.weight.bold,
+  },
+  wearableEmptyText: {
+    fontSize: typography.size.xs,
+    color: colors.text.light,
+    textAlign: 'center',
+    paddingVertical: spacing.md,
+    fontStyle: 'italic',
   },
 });
 
