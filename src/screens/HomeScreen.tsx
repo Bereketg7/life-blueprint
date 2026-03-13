@@ -40,7 +40,7 @@ const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <AtAGlanceDashboard
-        userName={userProfile ? `User` : undefined}
+        userName={userProfile?.name ?? undefined}
         userProfile={userProfile ?? undefined}
         todayActivity={todayActivity}
         todaySleep={todaySleep ?? undefined}
