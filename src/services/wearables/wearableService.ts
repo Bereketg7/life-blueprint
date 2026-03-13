@@ -108,6 +108,37 @@ export async function syncWearableData(device: WearableDevice): Promise<Wearable
   };
 }
 
+/**
+ * Fetch the latest wearable data for a device without creating a sync log.
+ * Returns null if the device is not connected or the type is unsupported.
+ */
+export async function fetchWearableData(device: WearableDevice): Promise<WearableData | null> {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    switch (device.type) {
+      case 'apple_health': {
+        if (!appleHealthKit.isAvailable()) return null;
+        const [steps, heartRate, sleepDuration, caloriesBurned] = await Promise.all([
+          appleHealthKit.getSteps(today),
+          appleHealthKit.getHeartRate(today),
+          appleHealthKit.getSleep(today),
+          appleHealthKit.getCaloriesBurned(today),
+        ]);
+        return { steps, heartRate, sleepDuration, caloriesBurned, date: today };
+      }
+      case 'fitbit':
+        return fitbitClient.fetchData('mock_token', today);
+      case 'garmin':
+        return garminClient.fetchData('mock_token', today);
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+
 export function startAutoSync(devices: WearableDevice[], onSync: (log: WearableSyncLog) => void): void {
   if (syncIntervalId) return;
   syncIntervalId = setInterval(async () => {

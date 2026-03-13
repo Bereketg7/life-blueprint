@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { ActivityLog } from '../../types';
 import { colors, typography, spacing, borderRadius, shadow } from '../../styles/theme';
+import ActivityTimer from './ActivityTimer';
+import { secondsToMinutes } from '../../utils/timerUtils';
 
 interface Props {
   onSave: (log: Omit<ActivityLog, 'id' | 'createdAt'>) => void;
@@ -39,54 +41,33 @@ const INTENSITY_OPTIONS: { value: Intensity; label: string; color: string }[] = 
   { value: 'high', label: 'High', color: colors.error },
 ];
 
-const MET_VALUES: Record<ActivityType, Record<Intensity, number>> = {
-  walking: { low: 2.5, moderate: 3.5, high: 4.5 },
-  cardio: { low: 6, moderate: 8, high: 10 },
-  cycling: { low: 4, moderate: 6, high: 8 },
-  swimming: { low: 5, moderate: 7, high: 9 },
-  strength: { low: 3, moderate: 5, high: 6 },
-  yoga: { low: 2, moderate: 3, high: 4 },
-  sports: { low: 4, moderate: 6, high: 8 },
-  flexibility: { low: 2, moderate: 2.5, high: 3 },
-  other: { low: 3, moderate: 5, high: 7 },
-};
-
-// Calorie formula: MET × weight(kg) × duration(min) / 60
-// MET values sourced from the Compendium of Physical Activities.
-const calcCalories = (type: ActivityType, duration: number, intensity: Intensity, weightKg: number): number => {
-  const met = MET_VALUES[type]?.[intensity] ?? 5;
-  return Math.round((met * weightKg * duration) / 60);
-};
-
 const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props) => {
   const today = new Date().toISOString().split('T')[0];
   const [activityType, setActivityType] = useState<ActivityType>('walking');
-  const [duration, setDuration] = useState('');
   const [intensity, setIntensity] = useState<Intensity>('moderate');
   const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  /** Set after the timer stops: [elapsedSeconds, caloriesBurned] */
+  const [timerResult, setTimerResult] = useState<{ duration: number; calories: number } | null>(null);
 
-  const durationNum = parseInt(duration) || 0;
-  const caloriesBurned = durationNum > 0 ? calcCalories(activityType, durationNum, intensity, userWeightKg) : 0;
   const activityName = ACTIVITY_TYPES.find(a => a.value === activityType)?.label ?? 'Activity';
 
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    if (!duration || durationNum <= 0) newErrors.duration = 'Enter a valid duration';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleTimerStop = (elapsedSeconds: number, calories: number) => {
+    setTimerResult({
+      duration: secondsToMinutes(elapsedSeconds),
+      calories,
+    });
   };
 
   const handleSave = () => {
-    if (!validate()) return;
+    if (!timerResult || timerResult.duration <= 0) return;
     onSave({
       userId,
       date: today,
       type: activityType,
       name: activityName,
-      duration: durationNum,
+      duration: timerResult.duration,
       intensity,
-      caloriesBurned,
+      caloriesBurned: timerResult.calories,
       notes: notes.trim() || undefined,
     });
   };
@@ -117,17 +98,6 @@ const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props)
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Duration (minutes)</Text>
-        <TextInput
-          style={[styles.input, errors.duration ? styles.inputError : null]}
-          placeholder="e.g. 30"
-          value={duration}
-          onChangeText={setDuration}
-          keyboardType="numeric"
-          placeholderTextColor={colors.text.light}
-        />
-        {errors.duration ? <Text style={styles.errorText}>{errors.duration}</Text> : null}
-
         <Text style={styles.sectionLabel}>Intensity</Text>
         <View style={styles.intensityRow}>
           {INTENSITY_OPTIONS.map(i => (
@@ -143,12 +113,22 @@ const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props)
           ))}
         </View>
 
-        {caloriesBurned > 0 && (
+        <Text style={styles.sectionLabel}>Workout Timer</Text>
+        <ActivityTimer
+          activityType={activityType}
+          intensity={intensity}
+          weightKg={userWeightKg}
+          onStop={handleTimerStop}
+        />
+
+        {timerResult && timerResult.duration > 0 && (
           <View style={styles.calorieCard}>
             <Text style={styles.calorieEmoji}>🔥</Text>
             <View>
-              <Text style={styles.calorieTitle}>Estimated Calories Burned</Text>
-              <Text style={styles.calorieValue}>{caloriesBurned} kcal</Text>
+              <Text style={styles.calorieTitle}>
+                {timerResult.duration} min · Estimated Calories
+              </Text>
+              <Text style={styles.calorieValue}>{timerResult.calories} kcal</Text>
             </View>
           </View>
         )}
@@ -165,8 +145,14 @@ const ActivityTracker = ({ onSave, onCancel, userId, userWeightKg = 70 }: Props)
         />
       </ScrollView>
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save Activity 💪</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, (!timerResult || timerResult.duration <= 0) && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={!timerResult || timerResult.duration <= 0}
+        >
+          <Text style={styles.saveBtnText}>
+            {timerResult && timerResult.duration > 0 ? 'Save Activity 💪' : 'Use timer above to log activity'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -244,7 +230,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   inputError: { borderColor: colors.error },
-  errorText: { fontSize: typography.size.xs, color: colors.error, marginTop: spacing.xs },
   textArea: { height: 90, textAlignVertical: 'top' },
   intensityRow: { flexDirection: 'row', gap: spacing.md },
   intensityBtn: {
@@ -291,6 +276,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     alignItems: 'center',
     ...shadow.md,
+  },
+  saveBtnDisabled: {
+    backgroundColor: colors.disabled,
   },
   saveBtnText: {
     fontSize: typography.size.md,
