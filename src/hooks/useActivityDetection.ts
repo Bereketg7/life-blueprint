@@ -41,9 +41,9 @@ export function useActivityDetection(): UseActivityDetectionResult {
   const analyseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup on unmount
-  useEffect(() => () => { _clearTimers(); }, []);
+  useEffect(() => () => { clearTimers(); }, []);
 
-  const _clearTimers = () => {
+  const clearTimers = () => {
     if (timerRef.current)   clearInterval(timerRef.current);
     if (analyseRef.current) clearTimeout(analyseRef.current);
     timerRef.current   = null;
@@ -53,7 +53,7 @@ export function useActivityDetection(): UseActivityDetectionResult {
   const startDetection = useCallback((
     simulatedActivity: ActivityType | 'resting' = 'walking',
   ) => {
-    _clearTimers();
+    clearTimers();
     bufferRef.current = [];
     setDetection(null);
     setDetecting(true);
@@ -77,12 +77,12 @@ export function useActivityDetection(): UseActivityDetectionResult {
       const result = analyseMotion(bufferRef.current);
       setDetection(result);
       setDetecting(false);
-      _clearTimers();
+      clearTimers();
     }, ANALYSE_AFTER_MS);
   }, []);
 
   const stopDetection = useCallback(() => {
-    _clearTimers();
+    clearTimers();
     if (bufferRef.current.length >= 10) {
       const result = analyseMotion(bufferRef.current);
       setDetection(result);
@@ -91,7 +91,7 @@ export function useActivityDetection(): UseActivityDetectionResult {
   }, []);
 
   const reset = useCallback(() => {
-    _clearTimers();
+    clearTimers();
     bufferRef.current = [];
     setDetection(null);
     setDetecting(false);

@@ -78,7 +78,7 @@ export function autoCalculateProfile(
     waterGoal: Math.round(weight * 35), // 35 ml / kg bodyweight
     calorieGoal: tdee,
     proteinGoal: protein,
-    carbGoal: Math.max(carbs, 50), // guard against negative carbs edge case
+    carbGoal: Math.max(carbs, 50), // minimum 50 g/day to meet essential carbohydrate intake needs
     fatGoal: fat,
     createdAt: now,
     updatedAt: now,
