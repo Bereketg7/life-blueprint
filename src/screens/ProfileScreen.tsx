@@ -59,6 +59,11 @@ const ProfileScreen = () => {
 
   const displayName = userProfile ? `User ${userProfile.userId.slice(0, 6)}` : 'Guest';
 
+  const getGoalsLabel = (profile: UserProfile): string => {
+    const goals = profile.primaryGoals?.length ? profile.primaryGoals : [profile.primaryGoal];
+    return goals.map(g => g.replace(/-/g, ' ')).join(', ');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -72,7 +77,7 @@ const ProfileScreen = () => {
           <Text style={styles.displayName}>{displayName}</Text>
           {userProfile && (
             <Text style={styles.subName}>
-              {userProfile.fitnessLevel} · {userProfile.primaryGoal.replace(/-/g, ' ')}
+              {userProfile.fitnessLevel} · {getGoalsLabel(userProfile)}
             </Text>
           )}
         </View>

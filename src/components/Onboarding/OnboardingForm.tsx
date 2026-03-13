@@ -19,7 +19,7 @@ interface FormData {
   gender: string;
   height: string;
   weight: string;
-  goalType: string;
+  primaryGoals: string[];
   activityLevel: string;
   dietaryPreferences: string[];
   healthConditions: string[];
@@ -40,7 +40,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
     gender: '',
     height: '',
     weight: '',
-    goalType: '',
+    primaryGoals: [],
     activityLevel: '',
     dietaryPreferences: [],
     healthConditions: [],
@@ -103,7 +103,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
       gender: (formData.gender as UserProfile['gender']) || 'other',
       height: parseFloat(formData.height) || 170,
       weight: parseFloat(formData.weight) || 70,
-      goalType: (formData.goalType as UserProfile['goalType']) || 'maintenance',
+      goalType: (formData.primaryGoals?.[0] as UserProfile['goalType']) || 'maintenance',
       activityLevel: (formData.activityLevel as UserProfile['activityLevel']) || 'sedentary',
       dietaryPreferences: formData.dietaryPreferences,
       healthConditions: formData.healthConditions,
@@ -120,7 +120,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
 
   const isNextEnabled = () => {
     if (currentStep === 0) return formData.name.trim().length > 0;
-    if (currentStep === 1) return formData.goalType.length > 0;
+    if (currentStep === 1) return formData.primaryGoals.length > 0;
     if (currentStep === 2) return formData.activityLevel.length > 0;
     return true;
   };
@@ -143,8 +143,18 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
       case 1:
         return (
           <GoalSelection
-            selectedGoal={formData.goalType}
-            onSelect={(goal) => setFormData((prev) => ({ ...prev, goalType: goal }))}
+            selectedGoals={formData.primaryGoals}
+            onToggle={(goal) =>
+              setFormData((prev) => {
+                const exists = prev.primaryGoals.includes(goal);
+                return {
+                  ...prev,
+                  primaryGoals: exists
+                    ? prev.primaryGoals.filter((g) => g !== goal)
+                    : [...prev.primaryGoals, goal],
+                };
+              })
+            }
           />
         );
       case 2:
